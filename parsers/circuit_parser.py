@@ -22,6 +22,12 @@ def parse_year_data(year_html):
 
 
 def parse_event_data(event_html):
+    # Data Needed:
+    # Table: -Events-
+    # name
+    # year
+    # region
+    # winner_id
     # return the links to all matches in the event
 
     soup = BeautifulSoup(event_html, "html.parser")
@@ -37,7 +43,18 @@ def parse_event_data(event_html):
 
 
 def parse_match_data(match_html):
-    # print the matchtype, matchteams and winner
+    # Data Needed:
+    # Table: -Matches-
+    # team1_id
+    # team2_id
+    # winner_id
+    # event_id
+    # score
+    # match_stage
+    # match date
+
+    # first check if both teams are present in the database, if not, add them. Also, check if the CORE of the two teams match
+    # if not, create a new core. A core changes if 3 or more players are different from one match to another.
 
     soup = BeautifulSoup(match_html, "html.parser")
 
@@ -55,8 +72,11 @@ def parse_match_data(match_html):
     if score_div:
         score = score_div.find_all("span")
 
+    winning_team = team_names[0] if (int(score[0].text.strip()) > int(score[2].text.strip())) else team_names[1]
+
     print("MATCH RESULTS")
     print(f"{full_stage}")
     print(f"{team_names[0]} vs {team_names[1]}")
+    print(f"WINNER:  {winning_team}")
     print(f"{score[0].text.strip()} - {score[2].text.strip()}")
     print("----------------------------")
