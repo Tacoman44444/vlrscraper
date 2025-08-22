@@ -27,10 +27,21 @@ def parse_event_data(event_html):
     # name
     # year
     # region
-    # winner_id
+    # winner_id -> team id
     # return the links to all matches in the event
 
     soup = BeautifulSoup(event_html, "html.parser")
+
+    #get event data and insert into the table
+    #1. get the event name:
+    title = soup.find("h1", class_="wf-title").text.strip()
+    #2. get the year
+    year = soup.find("a", style="white-space: nowrap;").text.strip()
+    #3. get the region. Find International event by checking for the word "Masters" for masters events 
+    # and "Valorant Champions 20XX" for champs events and "LOCK//IN" for the 2023 lock in event.
+    
+
+    #get match links
     match_links = []
 
     matches = soup.select("a.match-item")
