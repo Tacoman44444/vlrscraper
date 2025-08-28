@@ -1,5 +1,6 @@
 from enum import Enum
-
+from bs4 import BeautifulSoup
+from models import *
 class Region(Enum):
     International = 1
     EMEA = 2
@@ -74,3 +75,41 @@ def get_region_from_title(title: str):
     
     
     return Region.Pacific
+
+def check_majority_same(arr1: list[int], arr2: list[int]):
+    if (len(arr1) != len(arr2)):
+        print("ERROR::lists are not of the same length::checkmajority_same()")
+        return False
+    arr1.sort()
+    arr2.sort()
+
+    ptr1 = 0
+    ptr2 = 0
+    res = 0
+    while ptr1 < len(arr1) and ptr2 < len(arr2):
+        if arr1[ptr1] == arr2[ptr2]:
+            res += 1
+            ptr1 += 1
+            ptr2 += 1
+        elif arr1[ptr1] > arr2[ptr2]:
+            ptr2 += 1
+        else:
+            ptr1 += 1
+
+    return res >= 3
+    
+def get_player_ids(team_table):
+    player_boxes = team_table.find_all("td", class_="mod-player")
+    player_ids = []
+    for box in player_boxes:
+        player_vlr_id = box.find("a")["href"].split("/")[-2]
+        player_id = Player.get_by_vlr_id(player_vlr_id)
+        if player_id:
+            player_ids.append(player_id)
+        else:
+            country = box.find("i")["title"]
+            ign = box.find("a")["href"].split("/")[-1]
+            player_ids.append(Player.add_player(player_vlr_id, ign, country)) #adding the player
+
+    return player_ids
+    

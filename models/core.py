@@ -3,10 +3,17 @@ from sqlalchemy.orm import Mapped, mapped_column
 from models.base import Base
 from datetime import date
 from sqlalchemy import Date
+from db.session import SessionLocal
 
 class Core(Base):
     __tablename__ = "cores"
     id: Mapped[int] = mapped_column(primary_key = True)
-    vlr_id: Mapped[int] = mapped_column(unique = True)
-    start_date: Mapped[date] = mapped_column(Date)
-    end_date: Mapped[Optional[date]] = mapped_column(Date, nullable = True)
+
+    @classmethod
+    def add_core(cls):
+        with SessionLocal() as session:
+            core = cls()
+            session.add(core)
+            session.commit()
+            session.refresh(core)
+            return core.id

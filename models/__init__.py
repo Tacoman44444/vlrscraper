@@ -8,3 +8,4 @@ from .player_duels import PlayerDuels
 from .player_map_statistics import PlayerMapStatistics
 from .player import Player
 from .team import Team
+from .match_player import MatchPlayer
