@@ -4,12 +4,16 @@ from models import *
 
 def get_current_players_by_coreteam(coreteam_id):
     if coreteam_id is None:
+        print("WARNING :: coreteam_id is None :: get_current_players_by_coreteam()")
         return []
     latest_match = Match.get_latest_match(coreteam_id)
     if latest_match is None:
+        print("WARNING :: latest_match is None :: get_current_player_by_coreteam()")
         return []
     else:
-        return MatchPlayer.get_players_for_match(latest_match, coreteam_id)
+        players = MatchPlayer.get_players_for_match(latest_match, coreteam_id)
+        print(f'LOG :: players acc to latest_match: {players}')
+        return players
     
 def latest_five_rosters():
     with SessionLocal() as session:

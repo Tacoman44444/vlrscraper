@@ -78,8 +78,7 @@ def get_region_from_title(title: str):
 
 def check_majority_same(arr1: list[int], arr2: list[int]):
     if (len(arr1) != len(arr2)):
-        print("ERROR::lists are not of the same length::checkmajority_same()")
-        return False
+        print(f'WARNING :: lists are not of the same length (len(arr1) = {len(arr1)}, len(arr2) = {len(arr2)}) :: checkmajority_same()')
     arr1.sort()
     arr2.sort()
 
@@ -110,6 +109,6 @@ def get_player_ids(team_table):
             country = box.find("i")["title"]
             ign = box.find("a")["href"].split("/")[-1]
             player_ids.append(Player.add_player(player_vlr_id, ign, country)) #adding the player
-
+    print(f'DEBUG:: get_player_ids() returned the following list: {player_ids}')
     return player_ids
     

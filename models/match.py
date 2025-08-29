@@ -30,7 +30,7 @@ class Match(Base):
     @classmethod
     def add_match(cls, vlr_id: int, coreteam1_id: int, coreteam2_id: int, winner_id: int, event_id: int, score: int, match_stage: str, match_date: date):
         with SessionLocal() as session:
-            match = cls(vlr_id = vlr_id, coreteam1_id = coreteam2_id, winner_id = winner_id, event_id = event_id, score = score, match_stage = match_stage, match_date = match_date)
+            match = cls(vlr_id = vlr_id, coreteam1_id = coreteam1_id, coreteam2_id = coreteam2_id, winner_id = winner_id, event_id = event_id, score = score, match_stage = match_stage, match_date = match_date)
             session.add(match)
             session.commit()
             session.refresh(match)

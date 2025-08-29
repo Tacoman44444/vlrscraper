@@ -1,18 +1,22 @@
-
 from db.session import engine, SessionLocal
 from sqlalchemy.orm import Session
 from scrapers import circuit_scraper
+import logging
 
-circuit_scraper.get_data_for_year(2021)
+import logging
+from db.session import SessionLocal
+from sqlalchemy.orm import Session
+from scrapers import circuit_scraper
+
+# Disable SQLAlchemy INFO/DEBUG logs
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+
 
 def main():
-    
     db: Session = SessionLocal()
     try:
-        pass
-
+        circuit_scraper.get_data_for_year(2021)
     finally:
-
         db.close()
 
 

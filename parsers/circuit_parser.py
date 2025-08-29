@@ -107,7 +107,7 @@ def parse_match_data(match_html, match_link):
     # first check if both teams are present in the database, if not, add them. Also, check if the CORE of the two teams match
     # if not, create a new core. A core changes if 3 or more players are different from one match to another.
 
-    match_vlr_id = match_link.split("/")[-1]
+    match_vlr_id = match_link.split("/")[3]
     soup = BeautifulSoup(match_html, "html.parser")
 
     #get all 10 player IDs
@@ -117,7 +117,7 @@ def parse_match_data(match_html, match_link):
     team_subtables = table_container.find_all("table", class_="wf-table-inset mod-overview")
 
     team1_player_ids = get_player_ids(team_subtables[0])
-    team1_player_ids = get_player_ids(team_subtables[1])
+    team2_player_ids = get_player_ids(team_subtables[1])
 
     #DONE
 
@@ -150,35 +150,34 @@ def parse_match_data(match_html, match_link):
     if not check_majority_same(coreteam1_players, team1_player_ids):
         #for team1, the coreteam must change
         #check if a core with the given players exists
-        new_core = None
-        for core, players in core_players_list:
-            if check_majority_same(team1_player_ids, players):
-                new_core = core
-                break
-        if not new_core:
-            new_core = Core.add_core()
         
+        #new_core = None
+        #for core, players in core_players_list:
+        #    if check_majority_same(team1_player_ids, players):
+        #        new_core = core
+        #        break
+        #if not new_core:
+        new_core = Core.add_core()  
 
         coreteam1 = CoreTeam.add_coreteam(new_core, team1_id, start_date)
 
     if not check_majority_same(coreteam2_players, team2_player_ids):
         #for team1, the coreteam must change
         #check if a core with the given players exists
-        new_core = None
-        for core, players in core_players_list:
-            if check_majority_same(team2_player_ids, players):
-                new_core = core
-                break
-        if not new_core:
-            new_core = Core.add_core()
-        
+        #new_core = None
+        #for core, players in core_players_list:
+        #    if check_majority_same(team2_player_ids, players):
+        #        new_core = core
+        #        break
+        #if not new_core:
+        new_core = Core.add_core()
 
         coreteam2 = CoreTeam.add_coreteam(new_core, team2_id, start_date)
 
     score_box = soup.find("div", "match-header-vs-score")
     scorecard_list = score_box.find_all("span")
     scorecard_list_text = [scorecard.text.strip() for scorecard in scorecard_list]
-    winner_id = team1_id if scorecard_list_text[0] > scorecard_list_text[2] else team2_id
+    winner_id = coreteam1 if scorecard_list_text[0] > scorecard_list_text[2] else coreteam2
     score = scorecard_list_text[0] + scorecard_list_text[1] + scorecard_list_text[2]
 
     event_block = soup.find("a", class_="match-header-event")
@@ -198,3 +197,9 @@ def parse_match_data(match_html, match_link):
     print(f'match_stage: {full_stage}')
     print(f'match_date: {start_date}')
     #DONE
+
+    match_id = Match.add_match(match_vlr_id, coreteam1, coreteam2, winner_id, event_id, score, full_stage, start_date)
+    for player_id in team1_player_ids:
+        MatchPlayer.add_matchplayer(match_id, player_id, coreteam1)
+    for player_id in team2_player_ids:
+        MatchPlayer.add_matchplayer(match_id, player_id, coreteam2)
