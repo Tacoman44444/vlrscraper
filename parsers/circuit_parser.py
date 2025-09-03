@@ -203,3 +203,56 @@ def parse_match_data(match_html, match_link):
         MatchPlayer.add_matchplayer(match_id, player_id, coreteam1)
     for player_id in team2_player_ids:
         MatchPlayer.add_matchplayer(match_id, player_id, coreteam2)
+
+    num_maps = int(scorecard_list_text[0]) + int(scorecard_list_text[2])
+    print(f'number of maps: {num_maps}')
+
+    maps = soup.select("div.vm-stats-gamesnav-item.js-map-switch")
+    print(f'this should be 4 or 6 --> {len(maps)}')
+    map_links = []
+    map_vlr_ids = []
+    for i in range(1, num_maps+1):
+        map_id = maps[i]["data-game-id"]
+        map_link = "https://vlr.gg/" + match_vlr_id + "/?game=" + map_id + "&tab=overview"
+        map_links.append(map_link)
+        map_vlr_ids.append(map_id)
+
+    return match_id, map_vlr_ids,  map_links
+
+def parse_map_data(map_html, match_id, map_vlr_id, map_number):
+    #match id
+    #map number
+    #map name
+    #team1 score
+    #team2 score
+    #winner id -> FK: coreteam id 
+    #loser id -> FK: coreteam id
+
+    soup = BeautifulSoup(map_html, "html.parser")
+    map_list = soup.select("div.vm-stats-game")
+    current_map = None
+    for map in map_list:
+        if map["data-game-id"] == map_vlr_id:
+            current_map = map
+            break
+    map_name = current_map.find("span", style="position: relative;").text.strip()
+
+    team1_score = current_map.select_one("div.team div.score").text.strip()
+    team2_score = current_map.select_one("div.team.mod-right div.score").text.strip()
+
+    coreteams = Match.get_coreteams_of_match(match_id)
+
+    winner_id = coreteams[0] if team1_score > team2_score else coreteams[1]
+    loser_id = coreteams[0] if team1_score < team2_score else coreteams[1]
+
+    # DEBUG (MAP STATS)
+    print(f'match id: {match_id}')
+    print(f'map number: {map_number}')
+    print(f'map name: {map_name[0: 10]}')
+    print(f'team 1 score: {team1_score}')
+    print(f'team 2 score: {team2_score}')
+    print(f'winner id: {winner_id}')
+    print(f'loser id: {loser_id}')
+    #DONE
+
+    MapPlayed.add_mapplayed(match_id, map_number, map_name, team1_score, team2_score, winner_id, loser_id)

@@ -35,3 +35,13 @@ class Match(Base):
             session.commit()
             session.refresh(match)
             return match.id
+        
+    @classmethod
+    def get_coreteams_of_match(cls, match_id):
+        with SessionLocal() as session:
+            match = session.query(Match).filter(Match.id == match_id).first()
+
+            if match:
+                return [match.coreteam1_id, match.coreteam2_id]
+            else:
+                return None

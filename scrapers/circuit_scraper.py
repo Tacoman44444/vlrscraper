@@ -14,4 +14,8 @@ def get_data_for_year(year):
 
     for match_link in match_links:
         match_html = fetch.get_html(match_link)
-        circuit_parser.parse_match_data(match_html, match_link)
+        match_id, map_vlr_ids, map_links = circuit_parser.parse_match_data(match_html, match_link)
+        for i in range (len(map_links)):
+            print(map_links[i])
+            map_html = fetch.get_html(map_links[i])
+            circuit_parser.parse_map_data(map_html, match_id, map_vlr_ids[i], i+1)
