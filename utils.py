@@ -107,8 +107,9 @@ def get_player_ids(team_table):
             player_ids.append(player_id)
         else:
             country = box.find("i")["title"]
-            ign = box.find("a")["href"].split("/")[-1]
+            ign = box.find("div", class_="text-of").text.strip()
             player_ids.append(Player.add_player(player_vlr_id, ign, country)) #adding the player
     print(f'DEBUG:: get_player_ids() returned the following list: {player_ids}')
     return player_ids
+    
     

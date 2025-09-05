@@ -17,6 +17,15 @@ class Player(Base):
                 return player.id
             else:
                 return None
+            
+    @classmethod
+    def get_by_ign(cls, ign: str):
+        with SessionLocal() as session:
+            player = session.query(Player).filter(Player.ign == ign).all()
+            if len(player) == 1:
+                return player.id
+            else:
+                return None
         
     @classmethod
     def add_player(cls, vlr_id: int, ign: str, country: str):
