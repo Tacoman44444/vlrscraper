@@ -65,18 +65,22 @@ def parse_event_data(event_overview_html, event_matches_html, event_link):
         winner_team_data = soup_overview.find("div", class_="text-of standing-item-team-name")
         winner_team_region = winner_team_data.find("div", "ge-text-light").text.strip()
         #DEBUG
+        print("-----------------")
         print(f'team vlr id: {winner_vlr_id}')
         print(f'team name: {winner_team_name}')
         print(f'team region: {winner_team_region}')
+        print("-----------------")
         #DEBUG
         winner_id = Team.add_team(winner_vlr_id, winner_team_name)
 
     #DEBUG
+    print("-----------------")
     print(f'event vlr id: {event_vlr_id}')
     print(f'event name: {title}')
     print(f'year: {year}')
     print(f'region: {region.name}')
     print(f'winner team id: {winner_id}')
+    print("-----------------")
     #DEBUG
     #create the event
     Event.add_event(event_vlr_id, title, year, region.name, winner_id)
@@ -248,11 +252,13 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
     winner_id = coreteams[0] if team1_score > team2_score else coreteams[1]
     loser_id = coreteams[0] if team1_score < team2_score else coreteams[1]
 
-    player_rows = current_map.select("table tbody tr")
+    tables = current_map.select("table tbody")
 
-
+    team1_rows = tables[0].select("tr")
+    team2_rows = tables[1].select("tr")
 
     # DEBUG (MAP STATS)
+    print("-----------------")
     print(f'match id: {match_id}')
     print(f'map number: {map_number}')
     print(f'map name: {map_name[0: 10]}')
@@ -260,11 +266,15 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
     print(f'team 2 score: {team2_score}')
     print(f'winner id: {winner_id}')
     print(f'loser id: {loser_id}')
+    print("-----------------")
     #DONE
+
+    team1_ids = []
+    team2_ids = []
 
     map_played_id = MapPlayed.add_mapplayed(match_id, map_number, map_name, team1_score, team2_score, winner_id, loser_id)
 
-    for player in player_rows:
+    for player in team1_rows:
         name_box = player.find("td", class_="mod-player")
         vlr_id = name_box.find("a")["href"].split("/")[-2]
         name = name_box.find("div", class_="text-of").text.strip()
@@ -283,7 +293,7 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
         acs = acs_box.find("span", class_="side mod-side mod-both").text.strip()
 
         kills_box = stat_boxes[2]
-        kills = kills_box.find("span", class_="side mod-both").text.strip()
+        kills = kills_box.find("span", class_="side mod-side mod-both").text.strip()
 
         death_box = stat_boxes[3]
         deaths = death_box.find("span", class_="side mod-both").text.strip()
@@ -293,12 +303,14 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
 
         kast_box = stat_boxes[6]
         kast = kast_box.find("span", class_="side mod-both").text.strip()
+        kast = kast.rstrip("%")
 
         adr_box = stat_boxes[7]
         adr = adr_box.find("span", class_="side mod-both").text.strip()
 
         hs_box = stat_boxes[8]
         hs = hs_box.find("span", class_="side mod-both").text.strip()
+        hs = hs.rstrip("%")
 
         fk_box = stat_boxes[9]
         fk = fk_box.find("span", class_="side mod-both").text.strip()
@@ -312,10 +324,64 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
             player_id = Player.add_player(vlr_id, name, country)
         
         PlayerMapStatistics.add_playermapstatistic(map_played_id, player_id, agent_name, kills, deaths, assists, rating, acs, kast, adr, hs, fk, fd)
+        team1_ids.append(player_id)
 
-    return map_played_id
+    for player in team2_rows:
 
-def parse_duels_data(map_performance_html, map_played_vlr_id, map_played_id):
+        name_box = player.find("td", class_="mod-player")
+        vlr_id = name_box.find("a")["href"].split("/")[-2]
+        name = name_box.find("div", class_="text-of").text.strip()
+        country = name_box.find("i")["title"]
+
+        agent_box = player.find("td", class_="mod-agents")
+        agent_tag = agent_box.find("img")
+        agent_name = agent_tag["title"]
+
+        stat_boxes = player.find_all("td", class_="mod-stat")
+
+        rating_box = stat_boxes[0]
+        rating = rating_box.find("span", class_="side mod-side mod-both").text.strip()
+
+        acs_box = stat_boxes[1]
+        acs = acs_box.find("span", class_="side mod-side mod-both").text.strip()
+
+        kills_box = stat_boxes[2]
+        kills = kills_box.find("span", class_="side mod-side mod-both").text.strip()
+
+        death_box = stat_boxes[3]
+        deaths = death_box.find("span", class_="side mod-both").text.strip()
+
+        assist_box = stat_boxes[4]
+        assists = assist_box.find("span", class_="side mod-both").text.strip()
+
+        kast_box = stat_boxes[6]
+        kast = kast_box.find("span", class_="side mod-both").text.strip()
+        kast = kast.rstrip("%")
+
+        adr_box = stat_boxes[7]
+        adr = adr_box.find("span", class_="side mod-both").text.strip()
+
+        hs_box = stat_boxes[8]
+        hs = hs_box.find("span", class_="side mod-both").text.strip()
+        hs = hs.rstrip("%")
+
+        fk_box = stat_boxes[9]
+        fk = fk_box.find("span", class_="side mod-both").text.strip()
+
+        fd_box = stat_boxes[10]
+        fd = fd_box.find("span", class_="side mod-both").text.strip()
+
+        player_id = Player.get_by_vlr_id(vlr_id)
+
+        if not player_id:
+            player_id = Player.add_player(vlr_id, name, country)
+        
+        PlayerMapStatistics.add_playermapstatistic(map_played_id, player_id, agent_name, kills, deaths, assists, rating, acs, kast, adr, hs, fk, fd)
+        team2_ids.append(player_id)
+
+    return map_played_id, team1_ids, team2_ids
+
+def parse_duels_data(map_performance_html, map_played_vlr_id, map_played_id, t1, t2):
     soup = BeautifulSoup(map_performance_html, "html.parser")
     map_box = soup.select_one(f'div.vm-stats-game[data-game-id="{map_played_vlr_id}"]')
     duels_box = map_box.find("div")
@@ -324,6 +390,8 @@ def parse_duels_data(map_performance_html, map_played_vlr_id, map_played_id):
     first_entry = table_entries[0].find_all("div", class_="team")
     team1_names = []
     team2_names = []
+    team1_ids = [None] * len(t1)
+    team2_ids = [None] * len(t2)
 
     rows = len(table_entries) - 1
     cols = len(first_entry)
@@ -332,31 +400,61 @@ def parse_duels_data(map_performance_html, map_played_vlr_id, map_played_id):
     team2_matrix = [[0 for _ in range(cols)] for _ in range(rows)]
 
 
-    for i in range(1, len(first_entry)):
-        team1_names.append(first_entry[i].find("div").text.strip())
+    for i in range(len(first_entry)):
+        team2_names.append(first_entry[i].find("div").text.strip().split()[0])
     
     for i in range(1, len(table_entries)):
         entry = table_entries[i].find_all("td")
         name_block = entry[0].find("div", class_="team")
-        team2_names.append(name_block.find("div").text.strip())
+        team1_names.append(name_block.find("div").text.strip().split()[0])
         for j in range(1, len(entry)):
             curr_row = i - 1
             curr_column = j - 1
-            values = entry[j].find("div", class_="stats-sq")
-            team1_val = values[1].text.strip()
-            team2_val = values[0].text.strip()
+            values = entry[j].find_all("div", class_="stats-sq")
+            team1_val = values[0].text.strip()
+            team2_val = values[1].text.strip()
 
             team1_matrix[curr_row][curr_column] = team1_val
-            team2_matrix[curr_row][curr_column] - team2_val
+            team2_matrix[curr_row][curr_column] = team2_val
+
+    # sort the ids
+    for pid in t1:
+        ign = Player.get_ign(pid)
+        for i, name in enumerate(team1_names):
+            print(f'the name and ign are {name} and {ign}')
+            if name == ign:
+                team1_ids[i] = pid
+
+
+    for pid in t2:
+        ign = Player.get_ign(pid)
+        for i, name in enumerate(team2_names):
+            print(f'the name and ign are {name} and {ign}')
+            if name == ign:
+                team2_ids[i] = pid
 
     for i in range(rows):
         for j in range(cols):
-            player1 = team1_names[j]
-            player2 = team2_names[i]
             player1_data = team1_matrix[i][j]
             player2_data = team2_matrix[i][j]
-            player1_id = Player.get_by_ign(player1)
-            player2_id = Player.get_by_ign(player2)
+            
+            player2_id = team2_ids[j]
+            player1_id = team1_ids[i]
+
+            player1_ign = Player.get_ign(player1_id)
+            player2_ign = Player.get_ign(player2_id)
+
+            #DEBUG
+            print("-----------------")
+            print(f'player 1 ign: {player1_ign}')
+            print(f'player 2 ign: {player2_ign}')
+            print(f'map played id: {map_played_id}')
+            print(f'player2 id: {player2_id}')
+            print(f'player1 id: {player1_id}')
+            print(f'times player 1 killed player 2: {player1_data}')
+            print(f'times player 2 killed player 1: {player2_data}')
+            print("-----------------")
+            #DONE
 
             PlayerDuels.addplayerduels(map_played_id, player1_id, player2_id, player1_data)
             PlayerDuels.addplayerduels(map_played_id, player2_id, player1_id, player2_data)

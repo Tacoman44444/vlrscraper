@@ -19,5 +19,5 @@ def get_data_for_year(year):
             print(map_links[i])
             map_html = fetch.get_html(map_links[i])
             map_performance_html = fetch.get_html(map_performance_links[i])
-            map_played_id = circuit_parser.parse_map_data(map_html, match_id, map_vlr_ids[i], i+1)
-            circuit_parser.parse_duels_data(map_performance_html, map_vlr_ids[i], map_played_id)
+            map_played_id, team1_ids, team2_ids = circuit_parser.parse_map_data(map_html, match_id, map_vlr_ids[i], i+1)
+            circuit_parser.parse_duels_data(map_performance_html, map_vlr_ids[i], map_played_id, team1_ids, team2_ids)

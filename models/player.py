@@ -19,11 +19,11 @@ class Player(Base):
                 return None
             
     @classmethod
-    def get_by_ign(cls, ign: str):
+    def get_ign(cls, id: int):
         with SessionLocal() as session:
-            player = session.query(Player).filter(Player.ign == ign).all()
-            if len(player) == 1:
-                return player.id
+            player = session.query(Player).filter(Player.id == id).first()
+            if player:
+                return player.ign
             else:
                 return None
         
