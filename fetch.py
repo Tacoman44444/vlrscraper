@@ -1,10 +1,25 @@
 import time
 import requests
+from requests.adapters import HTTPAdapter
 
-HEADERS = {"User-Agent": "Mozilla/5.0"}
+# Reuse TCP/TLS across requests and enable a connection pool
+_session = requests.Session()
+_adapter = HTTPAdapter(pool_connections=50, pool_maxsize=50, max_retries=0)
+_session.mount("https://", _adapter)
+_session.mount("http://", _adapter)
 
-def get_html(url):
-    time.sleep(3)
-    response = requests.get(url, headers=HEADERS)
-    response.raise_for_status()
-    return response.text
+HEADERS = {
+    "User-Agent": "Mozilla/5.0",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",  # install 'brotli' package to use 'br'
+    "Connection": "keep-alive",
+}
+
+def get_html(url, timeout=(3.05, 15)):
+    # timeout=(connect_timeout, read_timeout)
+    st = time.time()
+    resp = _session.get(url, headers=HEADERS, timeout=timeout)
+    dt = time.time() - st
+    print(f"{dt} seconds taken to fetch  {url}")
+    resp.raise_for_status()
+    return resp.text
