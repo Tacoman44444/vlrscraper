@@ -118,6 +118,8 @@ def parse_match_data(match_html, match_link):
     team1_player_ids = []
     team2_player_ids = []
     table_container = soup.find("div", class_="vm-stats-game mod-active")
+    if not table_container:
+        return None, None, None, None
     team_subtables = table_container.find_all("table", class_="wf-table-inset mod-overview")
 
     team1_player_ids = get_player_ids(team_subtables[0])
@@ -213,18 +215,32 @@ def parse_match_data(match_html, match_link):
 
     maps = soup.select("div.vm-stats-gamesnav-item.js-map-switch")
     print(f'this should be 4 or 6 --> {len(maps)}')
-    map_links = []
-    map_performance_links = []
-    map_vlr_ids = []
-    for i in range(1, num_maps+1):
-        map_id = maps[i]["data-game-id"]
-        map_link = "https://vlr.gg/" + match_vlr_id + "/?game=" + map_id + "&tab=overview"
-        map_performance_link = "https://vlr.gg/" + match_vlr_id + "/?game=" + map_id + "&tab=performance"
-        map_links.append(map_link)
-        map_performance_links.append(map_performance_link)
-        map_vlr_ids.append(map_id)
 
-    return match_id, map_vlr_ids,  map_links, map_performance_links
+    if num_maps == 1:
+        map = soup.select_one("div.vm-stats-game.mod-active")
+        map_vlr_ids = []
+        map_id = map["data-game-id"]
+        map_vlr_ids.append(map_id)
+        map_links = []
+        map_performance_links = []
+        map_link = "https://vlr.gg/" + match_vlr_id + "/?game=" + map_id + "&tab=overview"
+        map_links.append(map_link)
+        map_performance_link = "https://vlr.gg/" + match_vlr_id + "/?game=" + map_id + "&tab=performance"
+        map_performance_links.append(map_performance_link)
+        return match_id, map_vlr_ids, map_links, map_performance_links
+    else:
+        map_links = []
+        map_performance_links = []
+        map_vlr_ids = []
+        for i in range(1, num_maps+1):
+            map_id = maps[i]["data-game-id"]
+            map_link = "https://vlr.gg/" + match_vlr_id + "/?game=" + map_id + "&tab=overview"
+            map_performance_link = "https://vlr.gg/" + match_vlr_id + "/?game=" + map_id + "&tab=performance"
+            map_links.append(map_link)
+            map_performance_links.append(map_performance_link)
+            map_vlr_ids.append(map_id)
+
+        return match_id, map_vlr_ids,  map_links, map_performance_links
 
 def parse_map_data(map_html, match_id, map_vlr_id, map_number):
     #match id
@@ -287,7 +303,10 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
         stat_boxes = player.find_all("td", class_="mod-stat")
 
         rating_box = stat_boxes[0]
-        rating = rating_box.find("span", class_="side mod-side mod-both").text.strip()
+        raw_rating = rating_box.find("span", class_="side mod-side mod-both").text
+        rating = raw_rating.replace("\xa0", "").strip()
+        if rating == "":
+            rating = None
 
         acs_box = stat_boxes[1]
         acs = acs_box.find("span", class_="side mod-side mod-both").text.strip()
@@ -303,7 +322,10 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
 
         kast_box = stat_boxes[6]
         kast = kast_box.find("span", class_="side mod-both").text.strip()
-        kast = kast.rstrip("%")
+        if "%" not in kast:
+            kast = None
+        else:
+            kast = kast.rstrip("%")
 
         adr_box = stat_boxes[7]
         adr = adr_box.find("span", class_="side mod-both").text.strip()
@@ -340,7 +362,10 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
         stat_boxes = player.find_all("td", class_="mod-stat")
 
         rating_box = stat_boxes[0]
-        rating = rating_box.find("span", class_="side mod-side mod-both").text.strip()
+        raw_rating = rating_box.find("span", class_="side mod-side mod-both").text
+        rating = raw_rating.replace("\xa0", "").strip()
+        if rating == "":
+            rating = None
 
         acs_box = stat_boxes[1]
         acs = acs_box.find("span", class_="side mod-side mod-both").text.strip()
@@ -356,7 +381,10 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
 
         kast_box = stat_boxes[6]
         kast = kast_box.find("span", class_="side mod-both").text.strip()
-        kast = kast.rstrip("%")
+        if "%" not in kast:
+            kast = None
+        else:
+            kast = kast.rstrip("%")
 
         adr_box = stat_boxes[7]
         adr = adr_box.find("span", class_="side mod-both").text.strip()
@@ -386,6 +414,8 @@ def parse_duels_data(map_performance_html, map_played_vlr_id, map_played_id, t1,
     map_box = soup.select_one(f'div.vm-stats-game[data-game-id="{map_played_vlr_id}"]')
     duels_box = map_box.find("div")
     table = duels_box.select_one("table.wf-table-inset.mod-matrix.mod-normal")
+    if not table:
+        return 
     table_entries = table.find_all("tr")
     first_entry = table_entries[0].find_all("div", class_="team")
     team1_names = []

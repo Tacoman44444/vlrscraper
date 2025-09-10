@@ -2,6 +2,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from models.base import Base
 from sqlalchemy import ForeignKey, Numeric
 from db.session import SessionLocal
+from typing import Optional
 
 class PlayerMapStatistics(Base):
     __tablename__ = "player_map_statistics"
@@ -12,9 +13,9 @@ class PlayerMapStatistics(Base):
     kills: Mapped[int] = mapped_column()
     deaths: Mapped[int] = mapped_column()
     assists: Mapped[int] = mapped_column()
-    rating: Mapped[float] = mapped_column(Numeric(5, 2))
+    rating: Mapped[Optional[float]] = mapped_column(Numeric(5, 2))
     acs: Mapped[int] = mapped_column()
-    kast_percent: Mapped[int] = mapped_column()
+    kast_percent: Mapped[Optional[int]] = mapped_column()
     adr: Mapped[int] = mapped_column()
     hs_percent: Mapped[int] = mapped_column()
     first_kills: Mapped[int] = mapped_column()
