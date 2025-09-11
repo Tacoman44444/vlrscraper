@@ -16,10 +16,8 @@ HEADERS = {
 }
 
 def get_html(url, timeout=(3.05, 15)):
+    time.sleep(1)
     # timeout=(connect_timeout, read_timeout)
-    st = time.time()
     resp = _session.get(url, headers=HEADERS, timeout=timeout)
-    dt = time.time() - st
-    print(f"{dt} seconds taken to fetch  {url}")
     resp.raise_for_status()
     return resp.text

@@ -118,8 +118,16 @@ def parse_match_data(match_html, match_link):
     team1_player_ids = []
     team2_player_ids = []
     table_container = soup.find("div", class_="vm-stats-game mod-active")
-    if not table_container:
+
+    if (not table_container):
         return None, None, None, None
+    
+    map_check = table_container.find("div", class_="map")
+    if map_check:
+        map_name_check = map_check.find("span").text.strip()
+        if (map_name_check == "TBD"):
+            return None, None, None, None
+    
     team_subtables = table_container.find_all("table", class_="wf-table-inset mod-overview")
 
     team1_player_ids = get_player_ids(team_subtables[0])

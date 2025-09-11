@@ -8,10 +8,10 @@ def get_data_for_year(year):
 
     event_links = circuit_parser.parse_year_data(year_html)
     event_links.reverse()
-    for event_link in event_links:
-        event_matches_html = fetch.get_html(event_link)
-        event_overview_html = fetch.get_html(event_link.replace("event/matches/", "event/", 1))
-        match_links = circuit_parser.parse_event_data(event_overview_html, event_matches_html, event_links[0])
+    for i in range(0, len(event_links)):
+        event_matches_html = fetch.get_html(event_links[i])
+        event_overview_html = fetch.get_html(event_links[i].replace("event/matches/", "event/", 1))
+        match_links = circuit_parser.parse_event_data(event_overview_html, event_matches_html, event_links[i])
         for match_link in match_links:
             match_html = fetch.get_html(match_link)
             match_id, map_vlr_ids, map_links, map_performance_links = circuit_parser.parse_match_data(match_html, match_link)
