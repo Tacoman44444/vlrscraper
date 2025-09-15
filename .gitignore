@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+#in memory db for testing
+file::memory:
+
 # Distribution / packaging
 .Python
 build/
