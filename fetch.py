@@ -11,13 +11,18 @@ _session.mount("http://", _adapter)
 HEADERS = {
     "User-Agent": "Mozilla/5.0",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Encoding": "gzip, deflate, br",  # install 'brotli' package to use 'br'
+    "Accept-Encoding": "gzip, deflate, br",
     "Connection": "keep-alive",
 }
 
 def get_html(url, timeout=(3.05, 15)):
-    time.sleep(1)
-    # timeout=(connect_timeout, read_timeout)
-    resp = _session.get(url, headers=HEADERS, timeout=timeout)
-    resp.raise_for_status()
-    return resp.text
+    while True:
+        try:
+            time.sleep(1)
+            # timeout=(connect_timeout, read_timeout)
+            resp = _session.get(url, headers=HEADERS, timeout=timeout)
+            resp.raise_for_status()
+            return resp.text
+        except requests.RequestException as e:
+            print(f"Network error: {e}")
+            input("Press SPACEBAR then Enter to continue...")

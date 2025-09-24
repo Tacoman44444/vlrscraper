@@ -114,6 +114,17 @@ def parse_match_data(match_html, match_link):
     match_vlr_id = match_link.split("/")[3]
     soup = BeautifulSoup(match_html, "html.parser")
 
+    event_block = soup.find("a", class_="match-header-event")
+    event_vlr_id = event_block["href"].split("/")[2]
+    event_id = Event.get_by_vlr_id(event_vlr_id)
+    tournament_name = event_block.find("div", style="font-weight: 700;").text.strip()
+    series = event_block.find("div", class_="match-header-event-series").text.strip()
+    full_stage = f"{tournament_name} - {series}"
+
+    if "Showmatch" in series:
+        print("Skipping showmatch")
+        return None, None, None, None
+
     #get all 10 player IDs
     team1_player_ids = []
     team2_player_ids = []
@@ -193,13 +204,6 @@ def parse_match_data(match_html, match_link):
     scorecard_list_text = [scorecard.text.strip() for scorecard in scorecard_list]
     winner_id = coreteam1 if scorecard_list_text[0] > scorecard_list_text[2] else coreteam2
     score = scorecard_list_text[0] + scorecard_list_text[1] + scorecard_list_text[2]
-
-    event_block = soup.find("a", class_="match-header-event")
-    event_vlr_id = event_block["href"].split("/")[2]
-    event_id = Event.get_by_vlr_id(event_vlr_id)
-    tournament_name = event_block.find("div", style="font-weight: 700;").text.strip()
-    series = event_block.find("div", class_="match-header-event-series").text.strip()
-    full_stage = f"{tournament_name} - {series}"
 
     #DATABASE DEBUG
     print(f'match vlr id: {match_vlr_id}')
@@ -318,6 +322,8 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
 
         acs_box = stat_boxes[1]
         acs = acs_box.find("span", class_="side mod-side mod-both").text.strip()
+        if acs == "":
+            acs = None
 
         kills_box = stat_boxes[2]
         kills = kills_box.find("span", class_="side mod-side mod-both").text.strip()
@@ -337,16 +343,25 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
 
         adr_box = stat_boxes[7]
         adr = adr_box.find("span", class_="side mod-both").text.strip()
+        if adr == "":
+            adr = None
 
         hs_box = stat_boxes[8]
         hs = hs_box.find("span", class_="side mod-both").text.strip()
-        hs = hs.rstrip("%")
+        if "%" not in hs:
+            hs = None
+        else:
+            hs = hs.rstrip("%")
 
         fk_box = stat_boxes[9]
         fk = fk_box.find("span", class_="side mod-both").text.strip()
+        if fk == "":
+            fk = None
 
         fd_box = stat_boxes[10]
         fd = fd_box.find("span", class_="side mod-both").text.strip()
+        if fd == "":
+            fd = None
 
         player_id = Player.get_by_vlr_id(vlr_id)
 
@@ -377,6 +392,8 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
 
         acs_box = stat_boxes[1]
         acs = acs_box.find("span", class_="side mod-side mod-both").text.strip()
+        if acs == "":
+            acs = None
 
         kills_box = stat_boxes[2]
         kills = kills_box.find("span", class_="side mod-side mod-both").text.strip()
@@ -396,16 +413,25 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
 
         adr_box = stat_boxes[7]
         adr = adr_box.find("span", class_="side mod-both").text.strip()
+        if adr == "":
+            adr = None
 
         hs_box = stat_boxes[8]
         hs = hs_box.find("span", class_="side mod-both").text.strip()
-        hs = hs.rstrip("%")
+        if "%" not in hs:
+            hs = None
+        else:
+            hs = hs.rstrip("%")
 
         fk_box = stat_boxes[9]
         fk = fk_box.find("span", class_="side mod-both").text.strip()
+        if fk == "":
+            fk = None
 
         fd_box = stat_boxes[10]
         fd = fd_box.find("span", class_="side mod-both").text.strip()
+        if fd == "":
+            fd = None
 
         player_id = Player.get_by_vlr_id(vlr_id)
 
@@ -475,7 +501,11 @@ def parse_duels_data(map_performance_html, map_played_vlr_id, map_played_id, t1,
         for j in range(cols):
             player1_data = team1_matrix[i][j]
             player2_data = team2_matrix[i][j]
-            
+
+            if not player1_data.isdigit() or not player2_data.isdigit():
+                print("ERROR::non digit data found in duel matrix, skipping entry")
+                continue
+
             player2_id = team2_ids[j]
             player1_id = team1_ids[i]
 
@@ -494,5 +524,9 @@ def parse_duels_data(map_performance_html, map_played_vlr_id, map_played_id, t1,
             print("-----------------")
             #DONE
 
-            PlayerDuels.addplayerduels(map_played_id, player1_id, player2_id, player1_data)
-            PlayerDuels.addplayerduels(map_played_id, player2_id, player1_id, player2_data)
+            if not player1_id or not player2_id :
+                print("ERROR::one or both player ids were None in parse_duels_data()")
+            else:
+                PlayerDuels.addplayerduels(map_played_id, player1_id, player2_id, player1_data)
+                PlayerDuels.addplayerduels(map_played_id, player2_id, player1_id, player2_data)
+            

@@ -34,7 +34,7 @@ def maps_handler():
 
 
 @app.get(
-        '/player_igns'
+        '/player_igns',
         summary="Get list of all player in-game names (IGNs)",
         description="Returns a list of all player in-game names (IGNs) in the database."
         )

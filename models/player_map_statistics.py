@@ -14,12 +14,12 @@ class PlayerMapStatistics(Base):
     deaths: Mapped[int] = mapped_column()
     assists: Mapped[int] = mapped_column()
     rating: Mapped[Optional[float]] = mapped_column(Numeric(5, 2))
-    acs: Mapped[int] = mapped_column()
+    acs: Mapped[Optional[int]] = mapped_column()
     kast_percent: Mapped[Optional[int]] = mapped_column()
-    adr: Mapped[int] = mapped_column()
-    hs_percent: Mapped[int] = mapped_column()
-    first_kills: Mapped[int] = mapped_column()
-    first_deaths: Mapped[int] = mapped_column()
+    adr: Mapped[Optional[int]] = mapped_column()
+    hs_percent: Mapped[Optional[int]] = mapped_column()
+    first_kills: Mapped[Optional[int]] = mapped_column()
+    first_deaths: Mapped[Optional[int]] = mapped_column()
 
     @classmethod
     def add_playermapstatistic(cls, map_played_id: int, player_id: int, agent: str, kills: int, deaths: int, assists: int, rating: float, acs: int, kast_percent: int, adr: int, hs_percent: int, first_kills: int, first_deaths: int):
