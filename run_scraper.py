@@ -8,7 +8,8 @@ from db.session import SessionLocal
 from sqlalchemy.orm import Session
 from scrapers import circuit_scraper
 
-# Disable SQLAlchemy INFO/DEBUG logs
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 

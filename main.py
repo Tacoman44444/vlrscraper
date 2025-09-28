@@ -1,3 +1,4 @@
+import logging
 from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
@@ -6,22 +7,45 @@ from models import *
 from datetime import date
 from pydantic import BaseModel
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+
 app = FastAPI()
 
-
-class MatchSchema(BaseModel):
+class PlayerMapStatisticsSchema(BaseModel):
     id: int
-    vlr_id: int
-    coreteam1_id: int
-    coreteam2_id: int
-    winner_id: int
-    event_id: int
-    score: str
-    match_stage: str
-    match_date: date
+    map_played_id: int
+    player_id: int
+    agent: str
+    kills: int
+    deaths: int
+    assists: int
+    rating: float | None
+    acs: int | None
+    kast_percent: int | None
+    adr: int | None
+    hs_percent: int | None
+    first_kills: int | None
+    first_deaths: int | None
 
     model_config = {"from_attributes": True}
 
+class MapData(BaseModel):
+    map_name: str
+    winner_name: str
+    loser_name: str
+    winner_score: int
+    loser_score: int
+    winner_statistics: list[PlayerMapStatisticsSchema]
+    loser_statistics: list[PlayerMapStatisticsSchema]
+
+class MatchData(BaseModel):
+    vlr_id: int
+    winner_name: str
+    loser_name: str
+    score: str
+    maps: list[MapData]
 
 @app.get(
         '/maps',
@@ -123,7 +147,7 @@ def team_duels_handler(
     coreteam2_ids = [ct.id for ct in coreteams2]
 
     matches = (
-        db.query(Match.id)
+        db.query(Match)
         .filter(
             or_(
                 and_(Match.coreteam1_id.in_(coreteam1_ids), Match.coreteam2_id.in_(coreteam2_ids)),
@@ -133,8 +157,9 @@ def team_duels_handler(
         .all()
     )
 
-    team1_wins = [1 for match in matches if matches.winner_id in coreteam1_ids]
-    team2_wins = [1 for match in matches if matches.winner_id in coreteam2_ids]
+    team1_wins = sum(1 for match in matches if match.winner_id in coreteam1_ids)
+    team2_wins = sum(1 for match in matches if match.winner_id in coreteam2_ids)
+
 
     if len(matches) != team1_wins + team2_wins:
         raise HTTPException(status_code=500, detail="Data inconsistency detected")
@@ -143,13 +168,65 @@ def team_duels_handler(
     if not match_ids:
         raise HTTPException(status_code=404, detail="No matches found between these teams")
     
+    matchHistory = []
+    
+    #need player data for each match
+    for match in matches:
+        # get the maps for each match
+        maps = db.query(MapPlayed).filter(MapPlayed.match_id == match.id).all()
+        team1_data = db.query(MatchPlayer).filter(and_(MatchPlayer.match_id == match.id, MatchPlayer.coreteam_id.in_(coreteam1_ids))).all()
+        team2_data = db.query(MatchPlayer).filter(and_(MatchPlayer.match_id == match.id, MatchPlayer.coreteam_id.in_(coreteam2_ids))).all()
+        team1_players = [data.player_id for data in team1_data]
+        team2_players = [data.player_id for data in team2_data]
+
+        team1_id = db.query(CoreTeam).filter(CoreTeam.id == match.coreteam1_id).first().team_id
+        team2_id = db.query(CoreTeam).filter(CoreTeam.id == match.coreteam2_id).first().team_id
+        team1_name = db.query(Team).filter(Team.id == team1_id).first().name
+        team2_name = db.query(Team).filter(Team.id == team2_id).first().name
+
+        matchData = MatchData(  vlr_id=match.vlr_id,
+                                winner_name=team1_name if match.winner_id==match.coreteam1_id else team2_name,
+                                loser_name=team2_name if match.winner_id==match.coreteam1_id else team1_name,
+                                score=match.score,
+                                maps=[]
+                            )
+
+        # get the players for each map
+        for map in maps:
+            player_statistics = db.query(PlayerMapStatistics).filter(PlayerMapStatistics.map_played_id == map.id).all()
+            team1_statistics = []
+            team2_statistics = []
+            for stats in player_statistics:
+                if stats.player_id in team1_players:
+                    team1_statistics.append(stats)
+                elif stats.player_id in team2_players:
+                    team2_statistics.append(stats)
+
+            winner_team_id = db.query(CoreTeam).filter(CoreTeam.id == map.winner_id).first().team_id
+            loser_team_id = db.query(CoreTeam).filter(CoreTeam.id == map.loser_id).first().team_id
+            winner_team_name = db.query(Team).filter(Team.id == team1_id).first().name
+            loser_team_name = db.query(Team).filter(Team.id == team2_id).first().name
+            
+            mapData = MapData(  map_name=map.map_name,
+                                winner_name=winner_team_name,
+                                loser_name=loser_team_name,
+                                winner_score=map.team1_score if map.team1_score > map.team2_score else map.team2_score,
+                                loser_score=map.team1_score if map.team1_score < map.team2_score else map.team2_score,
+                                winner_statistics=team1_statistics if map.team1_score > map.team2_score else team2_statistics,
+                                loser_statistics=team1_statistics if map.team1_score < map.team2_score else team2_statistics
+                            )
+            # append mapData to match data
+            matchData.maps.append(mapData)
+
+        matchHistory.append(matchData)
+    
     return {
         "team1_ign": team1.name,
         "team2_ign": team2.name,
         "number_of_matches": len(match_ids),
         "team1_wins": team1_wins,
         "team2_wins": team2_wins,
-        "matches_data": [MatchSchema.model_validate(m) for m in matches]
+        "matches": matchHistory,
     }
 
 
