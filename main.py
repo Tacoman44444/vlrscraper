@@ -31,7 +31,7 @@ class PlayerMapStatisticsSchema(BaseModel):
 
     model_config = {"from_attributes": True}
 
-class MapData(BaseModel):
+class MapDuelData(BaseModel):
     map_name: str
     winner_name: str
     loser_name: str
@@ -40,12 +40,20 @@ class MapData(BaseModel):
     winner_statistics: list[PlayerMapStatisticsSchema]
     loser_statistics: list[PlayerMapStatisticsSchema]
 
+class MapData(BaseModel):
+    map_name: str
+    result: str
+    team_score: int
+    opponent_score: int
+    opponent_name: str
+    agent_comp: list[str]
+
 class MatchData(BaseModel):
     vlr_id: int
     winner_name: str
     loser_name: str
     score: str
-    maps: list[MapData]
+    maps: list[MapDuelData]
 
 @app.get(
         '/maps',
@@ -207,7 +215,7 @@ def team_duels_handler(
             winner_team_name = db.query(Team).filter(Team.id == team1_id).first().name
             loser_team_name = db.query(Team).filter(Team.id == team2_id).first().name
             
-            mapData = MapData(  map_name=map.map_name,
+            mapData = MapDuelData(  map_name=map.map_name,
                                 winner_name=winner_team_name,
                                 loser_name=loser_team_name,
                                 winner_score=map.team1_score if map.team1_score > map.team2_score else map.team2_score,
@@ -419,6 +427,201 @@ def overall_mapwinpercent_handler(
         "losses": losses,
         "total": total,
         "win_percent": win_percent,
+    }
+
+
+@app.get(
+        '/mapdata/filtered',
+        summary="Get detailed map data for a team on a specific map within a date range",
+        description="Returns detailed map data for a team on a specific map within a given date range."
+        )
+def filtered_mapdata_handler(
+        team_vlr_id: int,
+        map_name: str,
+        start_date: date,
+        end_date: date = date.today(),
+        db: Session = Depends(get_db),
+):
+    team = db.query(Team).filter(Team.vlr_id == team_vlr_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    coreteams = db.query(CoreTeam).filter(CoreTeam.team_id == team.id).all()
+    if not coreteams:
+        raise HTTPException(status_code=404, detail="No coreteams found for this team")
+    
+    coreteam_ids = [ct.id for ct in coreteams]
+
+    stmt = (
+        select(MapPlayed)
+        .join(Match, MapPlayed.match_id == Match.id)
+        .where(
+            Match.match_date.between(start_date, end_date),
+            or_(
+                Match.coreteam1_id.in_(coreteam_ids),
+                Match.coreteam2_id.in_(coreteam_ids),
+            ),
+            MapPlayed.map_name == map_name,
+        )
+    )
+
+    maps = db.execute(stmt).scalars().all()
+    if not maps:
+        raise HTTPException(status_code=404, detail="No maps found for this team in range")
+    
+    map_data_list = []
+    for map in maps:
+        match = db.query(Match).filter(Match.id == map.match_id).first()
+        if not match:
+            raise HTTPException(status_code=500, detail="Data inconsistency detected, match missing")
+
+        if map.winner_id in coreteam_ids:
+            won = True
+            team_coreteam_id = map.winner_id
+            opponent_coreteam_id = map.loser_id
+        else:
+            won = False
+            team_coreteam_id = map.loser_id
+            opponent_coreteam_id = map.winner_id
+
+        if team_coreteam_id == match.coreteam1_id:
+            team_score = map.team1_score
+            opponent_score = map.team2_score
+        else:
+            team_score = map.team2_score
+            opponent_score = map.team1_score
+
+        opponent_coreteam = db.query(CoreTeam).filter(CoreTeam.id == opponent_coreteam_id).first()
+        if not opponent_coreteam:
+            raise HTTPException(status_code=500, detail="Data inconsistency detected, opponent coreteam missing")
+        opponent_team = db.query(Team).filter(Team.id == opponent_coreteam.team_id).first()
+        if not opponent_team:
+            raise HTTPException(status_code=500, detail="Data inconsistency detected, opponent team missing")
+        
+
+        name = map.map_name
+        opponent_name = opponent_team.name
+
+        player_ids = db.query(MatchPlayer.player_id).filter(MatchPlayer.coreteam_id == team_coreteam_id, MatchPlayer.match_id == map.match_id).all()
+        player_stats = db.query(PlayerMapStatistics).filter(PlayerMapStatistics.map_played_id == map.id).all()
+        if not player_stats:
+            raise HTTPException(status_code=500, detail="Data inconsistency detected, player stats missing")
+        
+        agent_comp = [stat.agent for stat in player_stats if stat.player_id in [pid[0] for pid in player_ids]]
+
+        if team_score > opponent_score:
+            result = "Win"
+        elif team_score < opponent_score:
+            result = "Loss"
+
+        map_data = MapData(
+            map_name=name,
+            result=result,
+            team_score=team_score,
+            opponent_score=opponent_score,
+            opponent_name=opponent_name,
+            agent_comp=agent_comp
+        )
+
+        map_data_list.append(map_data)
+
+    return {
+        "map_data": map_data_list
+    }
+
+
+@app.get( 
+        '/mapdata/overall',
+        summary="Get detailed map data for a team within a date range",
+        description="Returns detailed map data for a team within a given date range."
+        )
+def overall_mapdata_handler(
+        team_vlr_id: int, 
+        start_date: date,
+        end_date: date = date.today(),
+        db: Session = Depends(get_db),
+):
+    team = db.query(Team).filter(Team.vlr_id == team_vlr_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    coreteams = db.query(CoreTeam).filter(CoreTeam.team_id == team.id).all()
+    if not coreteams:
+        raise HTTPException(status_code=404, detail="No coreteams found for this team")
+    
+    coreteam_ids = [ct.id for ct in coreteams]
+
+    stmt = (
+        select(MapPlayed)
+        .join(Match, MapPlayed.match_id == Match.id)
+        .where(
+            Match.match_date.between(start_date, end_date),
+            or_(
+                Match.coreteam1_id.in_(coreteam_ids),
+                Match.coreteam2_id.in_(coreteam_ids),
+            ),
+        )
+    )
+
+    maps = db.execute(stmt).scalars().all()
+    if not maps:
+        raise HTTPException(status_code=404, detail="No maps found for this team in range")
+    
+    map_data_list = []
+    for map in maps:
+        match = db.query(Match).filter(Match.id == map.match_id).first()
+        if not match:
+            raise HTTPException(status_code=500, detail="Data inconsistency detected, match missing")
+
+        if map.winner_id in coreteam_ids:
+            won = True
+            team_coreteam_id = map.winner_id
+            opponent_coreteam_id = map.loser_id
+        else:
+            won = False
+            team_coreteam_id = map.loser_id
+            opponent_coreteam_id = map.winner_id
+
+        if team_coreteam_id == match.coreteam1_id:
+            team_score = map.team1_score
+            opponent_score = map.team2_score
+        else:
+            team_score = map.team2_score
+            opponent_score = map.team1_score
+
+        opponent_coreteam = db.query(CoreTeam).filter(CoreTeam.id == opponent_coreteam_id).first()
+        if not opponent_coreteam:
+            raise HTTPException(status_code=500, detail="Data inconsistency detected, opponent coreteam missing")
+        opponent_team = db.query(Team).filter(Team.id == opponent_coreteam.team_id).first()
+        if not opponent_team:
+            raise HTTPException(status_code=500, detail="Data inconsistency detected, opponent team missing")
+        
+
+        name = map.map_name
+        opponent_name = opponent_team.name  
+        player_ids = db.query(MatchPlayer.player_id).filter(MatchPlayer.coreteam_id == team_coreteam_id, MatchPlayer.match_id == map.match_id).all()
+        player_stats = db.query(PlayerMapStatistics).filter(PlayerMapStatistics.map_played_id == map.id).all()
+        if not player_stats:
+            raise HTTPException(status_code=500, detail="Data inconsistency detected, player stats missing")    
+        agent_comp = [stat.agent for stat in player_stats if stat.player_id in [pid[0] for pid in player_ids]]
+        if team_score > opponent_score:
+            result = "Win"
+        elif team_score < opponent_score:
+            result = "Loss"
+
+        map_data = MapData(
+            map_name=name,
+            result=result,
+            team_score=team_score,
+            opponent_score=opponent_score,
+            opponent_name=opponent_name,
+            agent_comp=agent_comp
+        )
+        map_data_list.append(map_data)
+
+    
+    return {
+        "map_data": map_data_list
     }
 
 

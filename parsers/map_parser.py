@@ -22,8 +22,8 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
         if map["data-game-id"] == map_vlr_id:
             current_map = map
             break
-    map_name = current_map.find("span", style="position: relative;").text.strip()
-    map_name= map_name.split()[0]
+    strings = list(current_map.find("span", style="position: relative;").stripped_strings)
+    map_name = strings[0] if strings else "Unknown"
 
     team1_score = current_map.select_one("div.team div.score").text.strip()
     team2_score = current_map.select_one("div.team.mod-right div.score").text.strip()
@@ -42,7 +42,7 @@ def parse_map_data(map_html, match_id, map_vlr_id, map_number):
     logger.debug("Debug Info for Map Statistics:")
     logger.debug(f'match id: {match_id}')
     logger.debug(f'map number: {map_number}')
-    logger.debug(f'map name: {map_name[0: 10]}')
+    logger.debug(f'map name: {map_name}')
     logger.debug(f'team 1 score: {team1_score}')
     logger.debug(f'team 2 score: {team2_score}')
     logger.debug(f'winner id: {winner_id}')
