@@ -1,5 +1,6 @@
 import logging
 from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 from db.session import get_db
@@ -12,6 +13,15 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 app = FastAPI()
+
+# CORS middleware for frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class PlayerMapStatisticsSchema(BaseModel):
     id: int
