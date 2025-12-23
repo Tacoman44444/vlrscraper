@@ -16,7 +16,7 @@ logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 def main():
     db: Session = SessionLocal()
     try:
-        years = (2023, 2024)
+        years = (2025, )
         for year in years:
             circuit_scraper.get_data_for_year(year)
     finally:

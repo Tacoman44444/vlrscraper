@@ -28,10 +28,18 @@ def parse_match_data(match_html, match_link):
     event_vlr_id = event_block["href"].split("/")[2]
     event_id = Event.get_by_vlr_id(event_vlr_id)
     tournament_name = event_block.find("div", style="font-weight: 700;").text.strip()
-    series = event_block.find("div", class_="match-header-event-series").text.strip()
-    full_stage = f"{tournament_name} - {series}"
+    # Extract the text
+    raw_series = event_block.find("div", class_="match-header-event-series").text
 
-    if "Showmatch" in series:
+    # This removes \n, \t, and collapses multiple spaces into one
+    clean_series = " ".join(raw_series.split())
+
+    # Do the same for tournament_name if it has artifacts
+    clean_tournament = " ".join(tournament_name.split())
+
+    full_stage = f"{clean_tournament} - {clean_series}"
+
+    if "Showmatch" in full_stage:
         logger.info("Skipping showmatch ...")
         return None, None, None, None
 
