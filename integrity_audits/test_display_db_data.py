@@ -213,3 +213,56 @@ def test_audit_player_map_statistics(db):
         assert not errors, f"PlayerStat ID {s.id} failed integrity check: {errors}"
 
     print(f"--- Player Stats Audit Complete ---")
+
+
+def test_audit_players(db):
+    """Verifies the integrity of every entry in the players table."""
+    stmt = select(Player).order_by(Player.id.desc()).limit(500)
+    players = db.execute(stmt).scalars().all()
+    
+    if not players:
+        print("\nNo player data found in database.")
+        return
+
+    # --- Sample Visualization Section ---
+    print(f"\n{'='*20} PLAYER DATA SAMPLE {'='*20}")
+    sample = players[0]
+    sample_data = {col.name: getattr(sample, col.name) for col in sample.__table__.columns}
+    
+    # Visualizes the sample entry with indent for readability
+    print(json.dumps(sample_data, indent=4, default=str))
+    print(f"{'='*53}\n")
+
+    print(f"--- Starting Audit of {len(players)} Player Records ---")
+    
+    # Define non-nullable fields based on your model
+    required_fields = ["id", "vlr_id", "ign", "country"]
+    
+    for p in players:
+        errors = []
+        
+        # 1. Nullity Check
+        for field in required_fields:
+            if getattr(p, field) is None:
+                errors.append(f"Field '{field}' is NULL")
+
+        # 2. Cleanup Check: Check for artifacts in IGN or Country
+        # VLR often includes team tags or flags in these fields during scraping
+        if p.ign and ("\t" in p.ign or "\n" in p.ign):
+            errors.append(f"IGN contains whitespace artifacts: {repr(p.ign)}")
+            
+        if p.country and ("\t" in p.country or "\n" in p.country):
+            errors.append(f"Country contains whitespace artifacts: {repr(p.country)}")
+
+        # 3. Logic Check: Ensure ign isn't just whitespace
+        if p.ign and not p.ign.strip():
+            errors.append("IGN is an empty string or just whitespace")
+
+        # Display Result
+        status = "✅ PASS" if not errors else f"❌ FAIL: {', '.join(errors)}"
+        print(f"ID: {p.id} | VLR_ID: {p.vlr_id} | IGN: {p.ign} | Country: {p.country} | {status}")
+
+        # Assert to trigger pytest failure if the record is broken
+        assert not errors, f"Player ID {p.id} failed integrity check: {errors}"
+
+    print(f"--- Player Audit Complete ---")
