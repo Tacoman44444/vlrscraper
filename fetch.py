@@ -18,7 +18,7 @@ HEADERS = {
 def get_html(url, timeout=(3.05, 15)):
     while True:
         try:
-            time.sleep(1)
+            time.sleep(3)
             # timeout=(connect_timeout, read_timeout)
             resp = _session.get(url, headers=HEADERS, timeout=timeout)
             resp.raise_for_status()

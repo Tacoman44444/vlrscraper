@@ -47,7 +47,7 @@ def test_audit_all_matches(db):
                 errors.append(f"Field '{field}' is NULL")
         
         status = "✅ PASS" if not errors else f"❌ FAIL: {', '.join(errors)}"
-        print(f"ID: {m.id} | VLR_ID: {m.vlr_id} | Date: {m.match_date} | {status}")
+        print(f"ID: {m.id} | VLR_ID: {m.vlr_id} | Match Stage: {m.match_stage} | Date: {m.match_date} | {status}")
 
         assert not errors, f"Match ID {m.id} failed integrity check: {errors}"
 
