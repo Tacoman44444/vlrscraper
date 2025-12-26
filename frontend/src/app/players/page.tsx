@@ -25,18 +25,33 @@ interface PlayerSelectProps {
 function Particles({ color, direction }: { color: "red" | "blue"; direction: "left" | "right" }) {
     const particleCount = 12;
     const colorClass = color === "red" ? "bg-red-500" : "bg-blue-500";
+    const [particles, setParticles] = useState<Array<{ top: number; left: number; duration: number; delay: number }>>([]);
+
+    useEffect(() => {
+        const generatedParticles = Array.from({ length: particleCount }).map(() => ({
+            top: 10 + Math.random() * 80,
+            left: direction === "right" ? Math.random() * 30 : 70 + Math.random() * 30,
+            duration: 3 + Math.random() * 4,
+            delay: Math.random() * 3,
+        }));
+        setParticles(generatedParticles);
+    }, [direction, particleCount]);
+
+    if (particles.length === 0) {
+        return <div className="absolute inset-0 overflow-hidden pointer-events-none" />;
+    }
 
     return (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {Array.from({ length: particleCount }).map((_, i) => (
+            {particles.map((particle, i) => (
                 <div
                     key={i}
                     className={`absolute w-1 h-1 ${colorClass} rounded-full opacity-40`}
                     style={{
-                        top: `${10 + Math.random() * 80}%`,
-                        left: direction === "right" ? `${Math.random() * 30}%` : `${70 + Math.random() * 30}%`,
-                        animation: `particle-flow-${direction} ${3 + Math.random() * 4}s linear infinite`,
-                        animationDelay: `${Math.random() * 3}s`,
+                        top: `${particle.top}%`,
+                        left: `${particle.left}%`,
+                        animation: `particle-flow-${direction} ${particle.duration}s linear infinite`,
+                        animationDelay: `${particle.delay}s`,
                     }}
                 />
             ))}
