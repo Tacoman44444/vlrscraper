@@ -14,7 +14,6 @@ logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 app = FastAPI()
 
-# CORS middleware for frontend access
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
@@ -96,8 +95,8 @@ def maps_handler():
 def played_igns_handler(
     db: Session = Depends(get_db),
 ):
-    players = db.query(Player).all()
-    igns = [player.ign for player in players]
+    players = db.query(Player.ign).all()
+    igns = [p[0] for p in players]
     return {"player_igns": igns}
 
 
@@ -109,7 +108,7 @@ def played_igns_handler(
 def teams_handler(
     db: Session = Depends(get_db),
 ):
-    teams = db.query(Team).all()
+    teams = db.query(Team.vlr_id, Team.name).all()
     team_list = [{"vlr_id": team.vlr_id, "name": team.name} for team in teams]
     return {"teams": team_list}
 
@@ -201,9 +200,7 @@ def team_duels_handler(
     
     matchHistory = []
     
-    #need player data for each match
     for match in matches:
-        # get the maps for each match
         maps = db.query(MapPlayed).filter(MapPlayed.match_id == match.id).all()
         team1_data = db.query(MatchPlayer).filter(and_(MatchPlayer.match_id == match.id, MatchPlayer.coreteam_id.in_(coreteam1_ids))).all()
         team2_data = db.query(MatchPlayer).filter(and_(MatchPlayer.match_id == match.id, MatchPlayer.coreteam_id.in_(coreteam2_ids))).all()
