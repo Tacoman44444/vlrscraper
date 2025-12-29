@@ -562,9 +562,106 @@ def filtered_mapdata_handler(
         map_data_list.append(map_data)
 
     return {
+        "total maps": len(map_data_list),
+        "wins": sum(1 for md in map_data_list if md.result == "Win"),
+        "losses": sum(1 for md in map_data_list if md.result == "Loss"),
         "map_data": map_data_list
     }
 
+@app.get( 
+        '/mapdata/overall_excluding',
+        summary="Get detailed map data for a team excluding specific maps within a date range",
+        description="Returns detailed map data for a team excluding specific maps within a given date range."
+        )
+def overall_mapdata_exclude_handler(
+        team_vlr_id: int, 
+        start_date: date,
+        exclude_maps: list[str] = Query(default=[]),
+        end_date: date = date.today(),
+        db: Session = Depends(get_db),
+):
+    team = db.query(Team).filter(Team.vlr_id == team_vlr_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    coreteams = db.query(CoreTeam).filter(CoreTeam.team_id == team.id).all()
+    if not coreteams:
+        raise HTTPException(status_code=404, detail="No coreteams found for this team")
+    
+    coreteam_ids = [ct.id for ct in coreteams]
+
+    stmt = (
+        select(MapPlayed)
+        .join(Match, MapPlayed.match_id == Match.id)
+        .where(
+            Match.match_date.between(start_date, end_date),
+            or_(
+                Match.coreteam1_id.in_(coreteam_ids),
+                Match.coreteam2_id.in_(coreteam_ids),
+            ),
+            ~MapPlayed.map_name.in_(exclude_maps),
+        )
+    )
+
+    maps = db.execute(stmt).scalars().all()
+    if not maps:
+        raise HTTPException(status_code=404, detail="No maps found for this team in range")
+    
+    map_data_list = []
+    for map in maps:
+        match = db.query(Match).filter(Match.id == map.match_id).first()
+        if not match:
+            raise HTTPException(status_code=500, detail="Data inconsistency detected, match missing")
+
+        if map.winner_id in coreteam_ids:
+            won = True
+            team_coreteam_id = map.winner_id
+            opponent_coreteam_id = map.loser_id
+        else:
+            won = False
+            team_coreteam_id = map.loser_id
+            opponent_coreteam_id = map.winner_id
+
+        if team_coreteam_id == match.coreteam1_id:
+            team_score = map.team1_score
+            opponent_score = map.team2_score
+        else:
+            team_score = map.team2_score
+            opponent_score = map.team1_score
+
+        opponent_coreteam = db.query(CoreTeam).filter(CoreTeam.id == opponent_coreteam_id).first()
+        if not opponent_coreteam:
+            raise HTTPException(status_code=500, detail="Data inconsistency detected, opponent coreteam missing")
+        opponent_team = db.query(Team).filter(Team.id == opponent_coreteam.team_id).first()
+        if not opponent_team:
+            raise HTTPException(status_code=500, detail="Data inconsistency detected, opponent team missing")
+        name = map.map_name
+        opponent_name = opponent_team.name
+        player_ids = db.query(MatchPlayer.player_id).filter(MatchPlayer.coreteam_id == team_coreteam_id, MatchPlayer.match_id == map.match_id).all()
+        player_stats = db.query(PlayerMapStatistics).filter(PlayerMapStatistics.map_played_id == map.id).all()
+        if not player_stats:
+            raise HTTPException(status_code=500, detail="Data inconsistency detected, player stats missing")    
+        agent_comp = [stat.agent for stat in player_stats if stat.player_id in [pid[0] for pid in player_ids]]
+        if team_score > opponent_score:
+            result = "Win"
+        elif team_score < opponent_score:
+            result = "Loss"
+
+        map_data = MapData(
+            map_name=name,
+            result=result,
+            team_score=team_score,
+            opponent_score=opponent_score,
+            opponent_name=opponent_name,
+            agent_comp=agent_comp
+        )
+        map_data_list.append(map_data)
+    return {
+        "total maps": len(map_data_list),
+        "wins": sum(1 for md in map_data_list if md.result == "Win"),
+        "losses": sum(1 for md in map_data_list if md.result == "Loss"),
+        "map_data": map_data_list
+    }
 
 @app.get( 
         '/mapdata/overall',
@@ -657,6 +754,9 @@ def overall_mapdata_handler(
 
     
     return {
+        "total maps": len(map_data_list),
+        "wins": sum(1 for md in map_data_list if md.result == "Win"),
+        "losses": sum(1 for md in map_data_list if md.result == "Loss"),
         "map_data": map_data_list
     }
 
