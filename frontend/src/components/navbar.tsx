@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useState, useEffect, useCallback } from "react";
-import { Github, Zap, Map, Home, Swords } from "lucide-react";
+import { Github, Zap, Map, Home, Swords, Users } from "lucide-react";
 import { Frame } from "@/components/ui/future-navbar";
 import Link from "next/link";
 import FutureButton from "@/components/ui/future-navbar";
@@ -19,7 +19,8 @@ export const MobileMenuContext = createContext<{
 const NAV_LINKS = [
     { href: "/", label: "Home", icon: Home },
     { href: "/maps", label: "Maps", icon: Map },
-    { href: "/players", label: "Duels", icon: Swords },
+    { href: "/teams", label: "Teams", icon: Users },
+    { href: "/players", label: "Player Duels", icon: Swords },
 ];
 
 function FutureNavbar() {
