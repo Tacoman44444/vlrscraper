@@ -50,6 +50,7 @@ class PlayerMapStatisticsSchema(BaseModel):
     hs_percent: int | None
     first_kills: int | None
     first_deaths: int | None
+    player_ign: str
 
     model_config = {"from_attributes": True}
 
@@ -221,32 +222,45 @@ def team_duels_handler(
                                 maps=[]
                             )
 
-        # get the players for each map
-        for map in maps:
-            player_statistics = db.query(PlayerMapStatistics).filter(PlayerMapStatistics.map_played_id == map.id).all()
-            team1_statistics = []
-            team2_statistics = []
-            for stats in player_statistics:
-                if stats.player_id in team1_players:
-                    team1_statistics.append(stats)
-                elif stats.player_id in team2_players:
-                    team2_statistics.append(stats)
+    map_ids = [m.id for m in maps]
+    all_stats = (
+        db.query(PlayerMapStatistics, Player.ign)
+        .join(Player)
+        .filter(PlayerMapStatistics.map_played_id.in_(map_ids))
+        .all()
+    )
 
-            winner_team_id = db.query(CoreTeam).filter(CoreTeam.id == map.winner_id).first().team_id
-            loser_team_id = db.query(CoreTeam).filter(CoreTeam.id == map.loser_id).first().team_id
-            winner_team_name = db.query(Team).filter(Team.id == team1_id).first().name
-            loser_team_name = db.query(Team).filter(Team.id == team2_id).first().name
-            
-            mapData = MapDuelData(  map_name=map.map_name,
-                                winner_name=winner_team_name,
-                                loser_name=loser_team_name,
-                                winner_score=map.team1_score if map.team1_score > map.team2_score else map.team2_score,
-                                loser_score=map.team1_score if map.team1_score < map.team2_score else map.team2_score,
-                                winner_statistics=team1_statistics if map.team1_score > map.team2_score else team2_statistics,
-                                loser_statistics=team1_statistics if map.team1_score < map.team2_score else team2_statistics
-                            )
-            # append mapData to match data
-            matchData.maps.append(mapData)
+    from collections import defaultdict
+    stats_by_map = defaultdict(list)
+    for stat_obj, ign in all_stats:
+        stat_obj.player_ign = ign
+        stats_by_map[stat_obj.map_played_id].append(stat_obj)
+
+    teams = db.query(Team).filter(Team.id.in_([team1_id, team2_id])).all()
+    team_names = {t.id: t.name for t in teams}
+
+    for map in maps:
+        player_statistics = stats_by_map[map.id]
+        
+        team1_stats = [s for s in player_statistics if s.player_id in team1_players]
+        team2_stats = [s for s in player_statistics if s.player_id in team2_players]
+
+        is_team1_winner = map.team1_score > map.team2_score
+        
+        winner_stats = team1_stats if is_team1_winner else team2_stats
+        loser_stats = team2_stats if is_team1_winner else team1_stats
+        
+        mapData = MapDuelData(
+            map_name=map.map_name,
+            winner_name=team_names.get(team1_id) if is_team1_winner else team_names.get(team2_id),
+            loser_name=team_names.get(team2_id) if is_team1_winner else team_names.get(team1_id),
+            winner_score=max(map.team1_score, map.team2_score),
+            loser_score=min(map.team1_score, map.team2_score),
+            winner_statistics=winner_stats,
+            loser_statistics=loser_stats
+        )
+        
+        matchData.maps.append(mapData)
 
         matchHistory.append(matchData)
     
