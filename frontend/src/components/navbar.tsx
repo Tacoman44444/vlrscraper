@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useState, useEffect, useCallback } from "react";
-import { Github, Zap, Map, Home, Swords, Users } from "lucide-react";
+import { Github, Zap, Map, Home, Swords, Users, BarChart3, Compass } from "lucide-react";
 import { Frame } from "@/components/ui/future-navbar";
 import Link from "next/link";
 import FutureButton from "@/components/ui/future-navbar";
@@ -21,6 +21,9 @@ const NAV_LINKS = [
     { href: "/maps", label: "Maps", icon: Map },
     { href: "/teams", label: "Teams", icon: Users },
     { href: "/players", label: "Player Duels", icon: Swords },
+    { href: "/teamduels", label: "Team Duels", icon: Swords },
+    { href: "/mapanalytics", label: "Analytics", icon: BarChart3 },
+    { href: "/strategy", label: "Strat Board", icon: Compass },
 ];
 
 function FutureNavbar() {

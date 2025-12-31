@@ -15,6 +15,7 @@ interface PlayerMapStatistics {
     id: number;
     map_played_id: number;
     player_id: number;
+    player_ign: string;
     agent: string;
     kills: number;
     deaths: number;
@@ -274,9 +275,14 @@ function PlayerStatRow({ stat, isWinner }: { stat: PlayerMapStatistics; isWinner
         <div className={`flex items-center gap-3 py-2 px-3 ${bgColor} rounded-lg hover:bg-white/5 transition-colors`}>
             <div className="flex items-center gap-2 flex-1 min-w-0">
                 <User className={`w-4 h-4 ${textColor} flex-shrink-0`} />
-                <span className="font-rajdhani font-semibold text-white truncate">
-                    {stat.agent}
-                </span>
+                <div className="flex flex-col min-w-0">
+                    <span className="font-rajdhani font-semibold text-white truncate">
+                        {stat.player_ign}
+                    </span>
+                    <span className="text-xs text-gray-500 truncate">
+                        {stat.agent}
+                    </span>
+                </div>
             </div>
             <div className="flex items-center gap-4 text-xs font-mono">
                 <div className="text-center">
@@ -328,7 +334,7 @@ function MatchHistory({ matches, team1Name, team2Name }: { matches: MatchData[];
             <div className="space-y-4">
                 {matches.map((match, idx) => (
                     <div
-                        key={match.vlr_id || idx}
+                        key={`${match.vlr_id}-${idx}`}
                         className="bg-gradient-to-br from-[#0f0f18]/90 to-[#0a0a12]/90 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden"
                     >
                         <div
