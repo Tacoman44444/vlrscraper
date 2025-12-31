@@ -63,13 +63,18 @@ class MapDuelData(BaseModel):
     winner_statistics: list[PlayerMapStatisticsSchema]
     loser_statistics: list[PlayerMapStatisticsSchema]
 
+class AgentAssignment(BaseModel):
+    player_ign: str
+    agent_name: str
+
 class MapData(BaseModel):
     map_name: str
     result: str
     team_score: int
     opponent_score: int
     opponent_name: str
-    agent_comp: list[str]
+    # Use a list of our new objects
+    agent_comp: list[AgentAssignment]
 
 class MatchData(BaseModel):
     vlr_id: int
@@ -538,12 +543,25 @@ def filtered_mapdata_handler(
         name = map.map_name
         opponent_name = opponent_team.name
 
-        player_ids = db.query(MatchPlayer.player_id).filter(MatchPlayer.coreteam_id == team_coreteam_id, MatchPlayer.match_id == map.match_id).all()
-        player_stats = db.query(PlayerMapStatistics).filter(PlayerMapStatistics.map_played_id == map.id).all()
-        if not player_stats:
-            raise HTTPException(status_code=500, detail="Data inconsistency detected, player stats missing")
-        
-        agent_comp = [stat.agent for stat in player_stats if stat.player_id in [pid[0] for pid in player_ids]]
+        player_ids_raw = db.query(MatchPlayer.player_id).filter(
+            MatchPlayer.coreteam_id == team_coreteam_id, 
+            MatchPlayer.match_id == map.match_id
+        ).all()
+        target_player_ids = [pid[0] for pid in player_ids_raw]
+
+        player_stats_raw = (
+            db.query(PlayerMapStatistics, Player.ign)
+            .join(Player, Player.id == PlayerMapStatistics.player_id)
+            .filter(PlayerMapStatistics.map_played_id == map.id)
+            .all()
+        )
+  
+        # Build the player-agent mapping
+        agent_comp = [
+            {"player_ign": ign, "agent_name": stat.agent} 
+            for stat, ign in player_stats_raw 
+            if stat.player_id in target_player_ids
+        ]
 
         if team_score > opponent_score:
             result = "Win"
@@ -567,6 +585,7 @@ def filtered_mapdata_handler(
         "losses": sum(1 for md in map_data_list if md.result == "Loss"),
         "map_data": map_data_list
     }
+
 
 @app.get( 
         '/mapdata/overall_excluding',
@@ -637,11 +656,27 @@ def overall_mapdata_exclude_handler(
             raise HTTPException(status_code=500, detail="Data inconsistency detected, opponent team missing")
         name = map.map_name
         opponent_name = opponent_team.name
-        player_ids = db.query(MatchPlayer.player_id).filter(MatchPlayer.coreteam_id == team_coreteam_id, MatchPlayer.match_id == map.match_id).all()
-        player_stats = db.query(PlayerMapStatistics).filter(PlayerMapStatistics.map_played_id == map.id).all()
-        if not player_stats:
-            raise HTTPException(status_code=500, detail="Data inconsistency detected, player stats missing")    
-        agent_comp = [stat.agent for stat in player_stats if stat.player_id in [pid[0] for pid in player_ids]]
+
+        player_ids_raw = db.query(MatchPlayer.player_id).filter(
+            MatchPlayer.coreteam_id == team_coreteam_id, 
+            MatchPlayer.match_id == map.match_id
+        ).all()
+        target_player_ids = [pid[0] for pid in player_ids_raw]
+
+        player_stats_raw = (
+            db.query(PlayerMapStatistics, Player.ign)
+            .join(Player, Player.id == PlayerMapStatistics.player_id)
+            .filter(PlayerMapStatistics.map_played_id == map.id)
+            .all()
+        )
+  
+        # Build the player-agent mapping
+        agent_comp = [
+            {"player_ign": ign, "agent_name": stat.agent} 
+            for stat, ign in player_stats_raw 
+            if stat.player_id in target_player_ids
+        ]
+
         if team_score > opponent_score:
             result = "Win"
         elif team_score < opponent_score:
@@ -662,6 +697,7 @@ def overall_mapdata_exclude_handler(
         "losses": sum(1 for md in map_data_list if md.result == "Loss"),
         "map_data": map_data_list
     }
+
 
 @app.get( 
         '/mapdata/overall',
@@ -732,11 +768,27 @@ def overall_mapdata_handler(
 
         name = map.map_name
         opponent_name = opponent_team.name  
-        player_ids = db.query(MatchPlayer.player_id).filter(MatchPlayer.coreteam_id == team_coreteam_id, MatchPlayer.match_id == map.match_id).all()
-        player_stats = db.query(PlayerMapStatistics).filter(PlayerMapStatistics.map_played_id == map.id).all()
-        if not player_stats:
+        player_ids_raw = db.query(MatchPlayer.player_id).filter(
+            MatchPlayer.coreteam_id == team_coreteam_id, 
+            MatchPlayer.match_id == map.match_id
+        ).all()
+        target_player_ids = [pid[0] for pid in player_ids_raw]
+
+        player_stats_raw = (
+            db.query(PlayerMapStatistics, Player.ign)
+            .join(Player, Player.id == PlayerMapStatistics.player_id)
+            .filter(PlayerMapStatistics.map_played_id == map.id)
+            .all()
+        )
+        if not player_stats_raw:
             raise HTTPException(status_code=500, detail="Data inconsistency detected, player stats missing")    
-        agent_comp = [stat.agent for stat in player_stats if stat.player_id in [pid[0] for pid in player_ids]]
+        
+        agent_comp = [
+            {"player_ign": ign, "agent_name": stat.agent} 
+            for stat, ign in player_stats_raw 
+            if stat.player_id in target_player_ids
+        ]
+
         if team_score > opponent_score:
             result = "Win"
         elif team_score < opponent_score:
