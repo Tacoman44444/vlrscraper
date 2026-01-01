@@ -24,13 +24,32 @@ interface Team {
     name: string;
 }
 
+interface AgentAssignment {
+    player_ign: string;
+    agent_name: string;
+}
+
+interface PlayerStatData {
+    player_ign: string;
+    agent: string;
+    kills: number;
+    deaths: number;
+    assists: number;
+    acs: number | null;
+    adr: number | null;
+    hs_percent: number | null;
+    first_kills: number | null;
+    first_deaths: number | null;
+}
+
 interface MapDataItem {
     map_name: string;
     result: "Win" | "Loss";
     team_score: number;
     opponent_score: number;
     opponent_name: string;
-    agent_comp: string[];
+    agent_comp: AgentAssignment[];
+    player_statistics: PlayerStatData[];
 }
 
 interface MapDataResponse {
@@ -391,48 +410,142 @@ function WinRateRing({ winRate, size = 120 }: { winRate: number; size?: number }
 
 function MatchCard({ match, index }: { match: MapDataItem; index: number }) {
     const isWin = match.result === "Win";
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    const sortedPlayers = [...match.player_statistics].sort((a, b) => (b.acs || 0) - (a.acs || 0));
+    const mvp = sortedPlayers[0];
+
+    const teamKills = match.player_statistics.reduce((sum, p) => sum + p.kills, 0);
+    const teamDeaths = match.player_statistics.reduce((sum, p) => sum + p.deaths, 0);
+    const avgACS = match.player_statistics.reduce((sum, p) => sum + (p.acs || 0), 0) / match.player_statistics.length;
+    const avgADR = match.player_statistics.reduce((sum, p) => sum + (p.adr || 0), 0) / match.player_statistics.length;
 
     return (
         <div
-            className={`relative p-5 rounded-2xl border backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] group ${isWin
+            className={`relative rounded-2xl border backdrop-blur-xl transition-all duration-300 group overflow-hidden ${isWin
                 ? "bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20 hover:border-emerald-500/40"
                 : "bg-gradient-to-br from-red-500/10 to-red-600/5 border-red-500/20 hover:border-red-500/40"
                 }`}
             style={{ animationDelay: `${index * 50}ms` }}
         >
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 flex items-center justify-center rounded-xl ${isWin ? "bg-emerald-500/20 border border-emerald-500/30" : "bg-red-500/20 border border-red-500/30"}`}>
-                        {isWin ? <Trophy className="w-5 h-5 text-emerald-400" /> : <Skull className="w-5 h-5 text-red-400" />}
+            <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 flex items-center justify-center rounded-xl ${isWin ? "bg-emerald-500/20 border border-emerald-500/30" : "bg-red-500/20 border border-red-500/30"}`}>
+                            {isWin ? <Trophy className="w-5 h-5 text-emerald-400" /> : <Skull className="w-5 h-5 text-red-400" />}
+                        </div>
+                        <div>
+                            <p className="font-rajdhani text-lg font-bold text-white">{match.map_name}</p>
+                            <p className="font-mono text-xs text-gray-500">vs {match.opponent_name}</p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="font-rajdhani text-lg font-bold text-white">{match.map_name}</p>
-                        <p className="font-mono text-xs text-gray-500">vs {match.opponent_name}</p>
+                    <div className="text-right">
+                        <p className={`font-rajdhani text-2xl font-bold ${isWin ? "text-emerald-400" : "text-red-400"}`}>
+                            {match.team_score} - {match.opponent_score}
+                        </p>
+                        <span className={`inline-flex px-2 py-0.5 rounded-lg text-xs font-mono font-semibold ${isWin ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}`}>
+                            {match.result}
+                        </span>
                     </div>
                 </div>
-                <div className="text-right">
-                    <p className={`font-rajdhani text-2xl font-bold ${isWin ? "text-emerald-400" : "text-red-400"}`}>
-                        {match.team_score} - {match.opponent_score}
-                    </p>
-                    <span className={`inline-flex px-2 py-0.5 rounded-lg text-xs font-mono font-semibold ${isWin ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}`}>
-                        {match.result}
+
+                <div className="grid grid-cols-4 gap-2 mb-4">
+                    <div className="p-2 rounded-lg bg-white/5 text-center">
+                        <p className="text-xs text-gray-500 uppercase">Team K/D</p>
+                        <p className={`font-rajdhani font-bold ${teamKills > teamDeaths ? "text-emerald-400" : "text-red-400"}`}>
+                            {(teamKills / (teamDeaths || 1)).toFixed(2)}
+                        </p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-white/5 text-center">
+                        <p className="text-xs text-gray-500 uppercase">Avg ACS</p>
+                        <p className="font-rajdhani font-bold text-cyan-400">{avgACS.toFixed(0)}</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-white/5 text-center">
+                        <p className="text-xs text-gray-500 uppercase">Avg ADR</p>
+                        <p className="font-rajdhani font-bold text-purple-400">{avgADR.toFixed(0)}</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-yellow-500/20 to-orange-500/20 text-center border border-yellow-500/30">
+                        <p className="text-xs text-yellow-400 uppercase">MVP</p>
+                        <p className="font-rajdhani font-bold text-white text-xs truncate">{mvp?.player_ign || "-"}</p>
+                    </div>
+                </div>
+
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-white/10"
+                >
+                    <Users className="w-4 h-4 text-gray-400" />
+                    <span className="font-mono text-xs text-gray-400 uppercase tracking-wider">
+                        {isExpanded ? "Hide Player Stats" : "Show Player Stats"}
                     </span>
-                </div>
+                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`} />
+                </button>
             </div>
 
-            <div className="pt-4 border-t border-white/10">
-                <p className="font-mono text-xs text-gray-500 uppercase tracking-widest mb-3">Agent Composition</p>
-                <div className="flex flex-wrap gap-2">
-                    {match.agent_comp.map((agent, idx) => (
-                        <span
-                            key={idx}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-rajdhani font-semibold text-white bg-gradient-to-r ${AGENT_COLORS[agent] || "from-gray-500 to-gray-700"} shadow-lg`}
-                        >
-                            {agent}
-                        </span>
-                    ))}
+            {isExpanded && (
+                <div className="px-5 pb-5 animate-fade-in-up">
+                    <table className="w-full text-xs">
+                        <thead>
+                            <tr className="border-b border-white/10">
+                                <th className="text-left py-2 px-2 text-gray-500 font-mono uppercase tracking-wider">Player</th>
+                                <th className="text-center py-2 px-2 text-gray-500 font-mono uppercase tracking-wider">Agent</th>
+                                <th className="text-center py-2 px-2 text-gray-500 font-mono uppercase tracking-wider">K/D/A</th>
+                                <th className="text-center py-2 px-2 text-gray-500 font-mono uppercase tracking-wider">ACS</th>
+                                <th className="text-center py-2 px-2 text-gray-500 font-mono uppercase tracking-wider">ADR</th>
+                                <th className="text-center py-2 px-2 text-gray-500 font-mono uppercase tracking-wider">HS%</th>
+                                <th className="text-center py-2 px-2 text-gray-500 font-mono uppercase tracking-wider">FK</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sortedPlayers.map((player, idx) => {
+                                const isMvp = idx === 0;
+
+                                return (
+                                    <tr
+                                        key={player.player_ign}
+                                        className={`border-b border-white/5 transition-colors hover:bg-white/5 ${isMvp ? "bg-gradient-to-r from-yellow-500/10 via-transparent to-transparent" : ""}`}
+                                    >
+                                        <td className="py-2 px-2">
+                                            <div className="flex items-center gap-2">
+                                                {isMvp && (
+                                                    <span className="text-yellow-400 text-[10px] font-bold px-1 py-0.5 rounded bg-yellow-500/20 border border-yellow-500/30">
+                                                        MVP
+                                                    </span>
+                                                )}
+                                                <span className="font-rajdhani font-semibold text-white">{player.player_ign}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-2 px-2 text-center">
+                                            <span className={`inline-flex px-2 py-0.5 rounded-lg text-[10px] font-rajdhani font-semibold text-white bg-gradient-to-r ${AGENT_COLORS[player.agent] || "from-gray-500 to-gray-700"}`}>
+                                                {player.agent}
+                                            </span>
+                                        </td>
+                                        <td className="py-2 px-2 text-center font-mono text-white">
+                                            <span className="text-emerald-400">{player.kills}</span>
+                                            <span className="text-gray-500">/</span>
+                                            <span className="text-red-400">{player.deaths}</span>
+                                            <span className="text-gray-500">/</span>
+                                            <span className="text-cyan-400">{player.assists}</span>
+                                        </td>
+                                        <td className="py-2 px-2 text-center font-mono font-semibold text-cyan-400">
+                                            {player.acs || "-"}
+                                        </td>
+                                        <td className="py-2 px-2 text-center font-mono text-purple-400">
+                                            {player.adr || "-"}
+                                        </td>
+                                        <td className="py-2 px-2 text-center font-mono text-orange-400">
+                                            {player.hs_percent ? `${player.hs_percent}%` : "-"}
+                                        </td>
+                                        <td className="py-2 px-2 text-center font-mono text-emerald-400">
+                                            {player.first_kills || 0}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 </div>
-            </div>
+            )}
         </div>
     );
 }
@@ -440,8 +553,8 @@ function MatchCard({ match, index }: { match: MapDataItem; index: number }) {
 function AgentUsageChart({ matches }: { matches: MapDataItem[] }) {
     const agentCount: Record<string, number> = {};
     matches.forEach((match) => {
-        match.agent_comp.forEach((agent) => {
-            agentCount[agent] = (agentCount[agent] || 0) + 1;
+        match.player_statistics.forEach((player) => {
+            agentCount[player.agent] = (agentCount[player.agent] || 0) + 1;
         });
     });
 
@@ -465,6 +578,188 @@ function AgentUsageChart({ matches }: { matches: MapDataItem[] }) {
                             style={{ width: `${(count / maxCount) * 100}%`, transitionDelay: `${idx * 100}ms` }}
                         />
                     </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+interface AggregatedPlayerStats {
+    player_ign: string;
+    gamesPlayed: number;
+    totalKills: number;
+    totalDeaths: number;
+    totalAssists: number;
+    avgACS: number;
+    totalFirstKills: number;
+    totalFirstDeaths: number;
+    avgADR: number;
+    avgHSPercent: number;
+}
+
+function TopPerformersPanel({ matches }: { matches: MapDataItem[] }) {
+    const playerStats: Record<string, AggregatedPlayerStats> = {};
+
+    matches.forEach((match) => {
+        match.player_statistics.forEach((player) => {
+            if (!playerStats[player.player_ign]) {
+                playerStats[player.player_ign] = {
+                    player_ign: player.player_ign,
+                    gamesPlayed: 0,
+                    totalKills: 0,
+                    totalDeaths: 0,
+                    totalAssists: 0,
+                    avgACS: 0,
+                    totalFirstKills: 0,
+                    totalFirstDeaths: 0,
+                    avgADR: 0,
+                    avgHSPercent: 0,
+                };
+            }
+            const ps = playerStats[player.player_ign];
+            ps.gamesPlayed++;
+            ps.totalKills += player.kills;
+            ps.totalDeaths += player.deaths;
+            ps.totalAssists += player.assists;
+            ps.avgACS += player.acs || 0;
+            ps.totalFirstKills += player.first_kills || 0;
+            ps.totalFirstDeaths += player.first_deaths || 0;
+            ps.avgADR += player.adr || 0;
+            ps.avgHSPercent += player.hs_percent || 0;
+        });
+    });
+
+    const players = Object.values(playerStats).map((p) => ({
+        ...p,
+        avgACS: p.avgACS / p.gamesPlayed,
+        avgADR: p.avgADR / p.gamesPlayed,
+        avgHSPercent: p.avgHSPercent / p.gamesPlayed,
+        kd: p.totalKills / (p.totalDeaths || 1),
+    }));
+
+    const topByACS = [...players].sort((a, b) => b.avgACS - a.avgACS).slice(0, 5);
+    const topByKD = [...players].sort((a, b) => b.kd - a.kd).slice(0, 5);
+    const topByKills = [...players].sort((a, b) => b.totalKills - a.totalKills).slice(0, 5);
+    const topByFirstKills = [...players].sort((a, b) => b.totalFirstKills - a.totalFirstKills).slice(0, 5);
+
+    const LeaderboardSection = ({
+        title,
+        data,
+        valueKey,
+        formatValue,
+        color
+    }: {
+        title: string;
+        data: typeof topByACS;
+        valueKey: keyof typeof topByACS[0];
+        formatValue: (val: number) => string;
+        color: string;
+    }) => (
+        <div className="space-y-2">
+            <h4 className="font-mono text-xs text-gray-500 uppercase tracking-widest mb-3">{title}</h4>
+            {data.map((player, idx) => (
+                <div key={player.player_ign} className="flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                    <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${idx === 0 ? "bg-gradient-to-br from-yellow-400 to-orange-500 text-black" :
+                        idx === 1 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-black" :
+                            idx === 2 ? "bg-gradient-to-br from-amber-600 to-amber-700 text-white" :
+                                "bg-white/10 text-gray-400"
+                        }`}>
+                        {idx + 1}
+                    </span>
+                    <span className="flex-1 font-rajdhani font-semibold text-white text-sm truncate">{player.player_ign}</span>
+                    <span className={`font-mono text-sm font-bold ${color}`}>
+                        {formatValue(player[valueKey] as number)}
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+
+    return (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            <LeaderboardSection
+                title="Top ACS"
+                data={topByACS}
+                valueKey="avgACS"
+                formatValue={(v) => v.toFixed(0)}
+                color="text-cyan-400"
+            />
+            <LeaderboardSection
+                title="Top K/D"
+                data={topByKD}
+                valueKey="kd"
+                formatValue={(v) => v.toFixed(2)}
+                color="text-emerald-400"
+            />
+            <LeaderboardSection
+                title="Total Kills"
+                data={topByKills}
+                valueKey="totalKills"
+                formatValue={(v) => v.toString()}
+                color="text-red-400"
+            />
+            <LeaderboardSection
+                title="First Bloods"
+                data={topByFirstKills}
+                valueKey="totalFirstKills"
+                formatValue={(v) => v.toString()}
+                color="text-orange-400"
+            />
+        </div>
+    );
+}
+
+function TeamStatsOverview({ matches }: { matches: MapDataItem[] }) {
+    let totalKills = 0;
+    let totalDeaths = 0;
+    let totalAssists = 0;
+    let totalFirstKills = 0;
+    let totalRounds = 0;
+    let acsSum = 0;
+    let adrSum = 0;
+    let hsSum = 0;
+    let playerCount = 0;
+
+    matches.forEach((match) => {
+        totalRounds += match.team_score + match.opponent_score;
+        match.player_statistics.forEach((player) => {
+            totalKills += player.kills;
+            totalDeaths += player.deaths;
+            totalAssists += player.assists;
+            totalFirstKills += player.first_kills || 0;
+            acsSum += player.acs || 0;
+            adrSum += player.adr || 0;
+            hsSum += player.hs_percent || 0;
+            playerCount++;
+        });
+    });
+
+    const avgACS = playerCount > 0 ? acsSum / playerCount : 0;
+    const avgADR = playerCount > 0 ? adrSum / playerCount : 0;
+    const avgHS = playerCount > 0 ? hsSum / playerCount : 0;
+    const teamKD = totalKills / (totalDeaths || 1);
+
+    const stats = [
+        { label: "Total Kills", value: totalKills.toLocaleString(), color: "text-emerald-400", bgColor: "from-emerald-500/20 to-emerald-600/10" },
+        { label: "Total Deaths", value: totalDeaths.toLocaleString(), color: "text-red-400", bgColor: "from-red-500/20 to-red-600/10" },
+        { label: "Total Assists", value: totalAssists.toLocaleString(), color: "text-cyan-400", bgColor: "from-cyan-500/20 to-cyan-600/10" },
+        { label: "Team K/D", value: teamKD.toFixed(2), color: teamKD >= 1 ? "text-emerald-400" : "text-red-400", bgColor: teamKD >= 1 ? "from-emerald-500/20 to-emerald-600/10" : "from-red-500/20 to-red-600/10" },
+        { label: "Total Rounds", value: totalRounds.toLocaleString(), color: "text-purple-400", bgColor: "from-purple-500/20 to-purple-600/10" },
+        { label: "First Bloods", value: totalFirstKills.toLocaleString(), color: "text-orange-400", bgColor: "from-orange-500/20 to-orange-600/10" },
+        { label: "Avg ACS", value: avgACS.toFixed(0), color: "text-cyan-400", bgColor: "from-cyan-500/20 to-cyan-600/10" },
+        { label: "Avg ADR", value: avgADR.toFixed(0), color: "text-purple-400", bgColor: "from-purple-500/20 to-purple-600/10" },
+        { label: "Avg HS%", value: `${avgHS.toFixed(0)}%`, color: "text-orange-400", bgColor: "from-orange-500/20 to-orange-600/10" },
+    ];
+
+    return (
+        <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-3">
+            {stats.map((stat) => (
+                <div
+                    key={stat.label}
+                    className={`p-4 rounded-xl bg-gradient-to-br ${stat.bgColor} border border-white/10 text-center hover:scale-105 transition-transform duration-200`}
+                >
+                    <p className={`font-rajdhani text-xl font-bold ${stat.color}`}>{stat.value}</p>
+                    <p className="font-mono text-[10px] text-gray-500 uppercase tracking-wider mt-1">{stat.label}</p>
                 </div>
             ))}
         </div>
@@ -692,6 +987,32 @@ export default function MapAnalyticsPage() {
                                 </div>
                                 <AgentUsageChart matches={data.map_data} />
                             </div>
+                        </div>
+
+                        <div className="p-8 bg-gradient-to-br from-[#0f0f18]/90 to-[#0a0a12]/90 backdrop-blur-xl border border-white/10 rounded-3xl">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 border border-cyan-500/30 rounded-xl">
+                                    <Activity className="w-5 h-5 text-cyan-400" />
+                                </div>
+                                <div>
+                                    <h3 className="font-rajdhani text-xl font-bold text-white uppercase">Team Performance Overview</h3>
+                                    <p className="font-mono text-xs text-gray-500">Aggregate statistics across all matches</p>
+                                </div>
+                            </div>
+                            <TeamStatsOverview matches={data.map_data} />
+                        </div>
+
+                        <div className="p-8 bg-gradient-to-br from-[#0f0f18]/90 to-[#0a0a12]/90 backdrop-blur-xl border border-white/10 rounded-3xl">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-yellow-500/20 to-orange-600/10 border border-yellow-500/30 rounded-xl">
+                                    <Trophy className="w-5 h-5 text-yellow-400" />
+                                </div>
+                                <div>
+                                    <h3 className="font-rajdhani text-xl font-bold text-white uppercase">Top Performers</h3>
+                                    <p className="font-mono text-xs text-gray-500">Player leaderboards across all games</p>
+                                </div>
+                            </div>
+                            <TopPerformersPanel matches={data.map_data} />
                         </div>
 
                         <div className="p-8 bg-gradient-to-br from-[#0f0f18]/90 to-[#0a0a12]/90 backdrop-blur-xl border border-white/10 rounded-3xl">

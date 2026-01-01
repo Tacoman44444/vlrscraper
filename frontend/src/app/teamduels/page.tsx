@@ -245,21 +245,19 @@ function TeamSelect({ value, onChange, teams, placeholder, color, isLoading }: T
 
 function StatBar({ label, value, maxValue, color }: { label: string; value: number; maxValue: number; color: "red" | "blue" }) {
     const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
-    const colorClasses = color === "red"
-        ? "from-red-600 via-red-500 to-red-400 shadow-[0_0_20px_rgba(239,68,68,0.5)]"
-        : "from-blue-600 via-blue-500 to-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.5)]";
+    const barColor = color === "red" ? "bg-red-500" : "bg-blue-500";
 
     return (
-        <div className="space-y-2">
-            <div className="flex justify-between items-center">
-                <span className="font-mono text-xs text-gray-500 uppercase tracking-widest">{label}</span>
-                <span className={`font-rajdhani text-3xl font-bold ${color === "red" ? "text-red-400" : "text-blue-400"} drop-shadow-[0_0_10px_currentColor]`}>
+        <div className="space-y-3">
+            <div className="flex justify-between items-baseline">
+                <span className="text-[11px] text-gray-500 uppercase tracking-wider font-medium">{label}</span>
+                <span className={`text-2xl font-semibold tabular-nums ${color === "red" ? "text-red-400" : "text-blue-400"}`}>
                     {value}
                 </span>
             </div>
-            <div className="h-3 bg-white/5 rounded-full overflow-hidden border border-white/10">
+            <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                 <div
-                    className={`h-full bg-gradient-to-r ${colorClasses} rounded-full transition-all duration-1000 ease-out`}
+                    className={`h-full ${barColor} rounded-full transition-all duration-700 ease-out`}
                     style={{ width: `${percentage}%` }}
                 />
             </div>
@@ -648,54 +646,55 @@ function TeamDuelsContent() {
 
                 {duelStats && !loading && !error && (
                     <>
-                        <div className="text-center mb-8 p-6 bg-gradient-to-br from-[#0f0f18]/90 to-[#0a0a12]/90 backdrop-blur-xl border border-purple-500/20 rounded-2xl">
-                            <p className="font-mono text-xs text-gray-500 uppercase tracking-widest mb-2">Total Matches Played</p>
-                            <p className="font-rajdhani text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-purple-400 to-blue-500">
+                        <div className="text-center mb-10 py-8 border-y border-white/[0.06]">
+                            <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-3">Total Matches Played</p>
+                            <p className="text-5xl font-semibold text-white tabular-nums">
                                 {duelStats.number_of_matches}
                             </p>
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-8 lg:gap-10">
                             <div className={`
-              relative p-8 
-              bg-gradient-to-br from-[#0f0f18]/90 to-[#0a0a12]/90 
-              backdrop-blur-2xl border-2 rounded-3xl 
-              transition-all duration-500
-              before:absolute before:inset-0 before:rounded-3xl before:bg-gradient-to-b before:from-white/5 before:to-transparent before:pointer-events-none
-              ${winner === team1?.name
-                                    ? "border-red-500/60 shadow-[0_0_50px_rgba(239,68,68,0.3)]"
-                                    : "border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.1)]"
+                                relative p-6 
+                                bg-[#0c0c14] 
+                                border rounded-xl 
+                                transition-all duration-300
+                                ${winner === team1?.name
+                                    ? "border-red-500/50"
+                                    : "border-white/[0.08]"
                                 }
-            `}>
-                                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-600 via-red-500 to-red-400 rounded-t-3xl" />
+                            `}>
+                                <div className="absolute top-0 left-0 right-0 h-0.5 bg-red-500 rounded-t-xl" />
+
                                 {winner === team1?.name && (
-                                    <div className="absolute -top-4 -right-4 w-12 h-12 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl shadow-[0_0_30px_rgba(251,191,36,0.5)] animate-bounce">
-                                        <Trophy className="w-6 h-6 text-white" />
+                                    <div className="absolute -top-3 right-4 px-2 py-0.5 bg-amber-500/90 rounded text-[10px] font-semibold text-black uppercase tracking-wide flex items-center gap-1">
+                                        <Trophy className="w-3 h-3" />
+                                        Leader
                                     </div>
                                 )}
 
-                                <div className="flex items-center gap-5 mb-8">
-                                    <div className="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-red-500/20 to-red-600/10 border-2 border-red-500/30 rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
-                                        <Users className="w-10 h-10 text-red-400" />
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="w-12 h-12 flex items-center justify-center bg-red-500/10 border border-red-500/20 rounded-lg">
+                                        <Users className="w-6 h-6 text-red-400" />
                                     </div>
                                     <div>
-                                        <h2 className="font-rajdhani text-3xl font-bold text-white uppercase tracking-wider">
+                                        <h2 className="text-xl font-semibold text-white">
                                             {duelStats.team1_ign}
                                         </h2>
-                                        <p className="font-mono text-xs text-red-400 uppercase tracking-widest flex items-center gap-2">
+                                        <p className="text-[11px] text-red-400/80 uppercase tracking-wider flex items-center gap-1.5">
                                             <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
                                             Team 1
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="space-y-6">
+                                <div className="space-y-5">
                                     <StatBar label="Match Wins" value={team1Wins} maxValue={maxWins} color="red" />
 
-                                    <div className="pt-6 border-t border-white/10">
+                                    <div className="pt-5 border-t border-white/[0.06]">
                                         <div className="flex items-center justify-between">
-                                            <span className="font-mono text-xs text-gray-500 uppercase tracking-widest">Win Rate</span>
-                                            <span className="font-rajdhani text-2xl font-bold text-red-400 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                                            <span className="text-[11px] text-gray-500 uppercase tracking-wider">Win Rate</span>
+                                            <span className="text-xl font-semibold text-red-400 tabular-nums">
                                                 {duelStats.number_of_matches > 0
                                                     ? ((team1Wins / duelStats.number_of_matches) * 100).toFixed(1)
                                                     : "0.0"
@@ -707,49 +706,50 @@ function TeamDuelsContent() {
                             </div>
 
                             <div className="hidden lg:flex items-center justify-center">
-                                <div className="w-px h-full bg-gradient-to-b from-transparent via-purple-500/30 to-transparent" />
+                                <div className="w-px h-full bg-white/[0.06]" />
                             </div>
 
                             <div className={`
-              relative p-8 
-              bg-gradient-to-br from-[#0f0f18]/90 to-[#0a0a12]/90 
-              backdrop-blur-2xl border-2 rounded-3xl 
-              transition-all duration-500
-              before:absolute before:inset-0 before:rounded-3xl before:bg-gradient-to-b before:from-white/5 before:to-transparent before:pointer-events-none
-              ${winner === team2?.name
-                                    ? "border-blue-500/60 shadow-[0_0_50px_rgba(59,130,246,0.3)]"
-                                    : "border-blue-500/20 shadow-[0_0_30px_rgba(59,130,246,0.1)]"
+                                relative p-6 
+                                bg-[#0c0c14] 
+                                border rounded-xl 
+                                transition-all duration-300
+                                ${winner === team2?.name
+                                    ? "border-blue-500/50"
+                                    : "border-white/[0.08]"
                                 }
-            `}>
-                                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400 rounded-t-3xl" />
+                            `}>
+                                <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-500 rounded-t-xl" />
+
                                 {winner === team2?.name && (
-                                    <div className="absolute -top-4 -right-4 w-12 h-12 flex items-center justify-center bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl shadow-[0_0_30px_rgba(251,191,36,0.5)] animate-bounce">
-                                        <Trophy className="w-6 h-6 text-white" />
+                                    <div className="absolute -top-3 right-4 px-2 py-0.5 bg-amber-500/90 rounded text-[10px] font-semibold text-black uppercase tracking-wide flex items-center gap-1">
+                                        <Trophy className="w-3 h-3" />
+                                        Leader
                                     </div>
                                 )}
 
-                                <div className="flex items-center gap-5 mb-8">
-                                    <div className="w-20 h-20 flex items-center justify-center bg-gradient-to-br from-blue-500/20 to-blue-600/10 border-2 border-blue-500/30 rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
-                                        <Users className="w-10 h-10 text-blue-400" />
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="w-12 h-12 flex items-center justify-center bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                                        <Users className="w-6 h-6 text-blue-400" />
                                     </div>
                                     <div>
-                                        <h2 className="font-rajdhani text-3xl font-bold text-white uppercase tracking-wider">
+                                        <h2 className="text-xl font-semibold text-white">
                                             {duelStats.team2_ign}
                                         </h2>
-                                        <p className="font-mono text-xs text-blue-400 uppercase tracking-widest flex items-center gap-2">
+                                        <p className="text-[11px] text-blue-400/80 uppercase tracking-wider flex items-center gap-1.5">
                                             <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
                                             Team 2
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="space-y-6">
+                                <div className="space-y-5">
                                     <StatBar label="Match Wins" value={team2Wins} maxValue={maxWins} color="blue" />
 
-                                    <div className="pt-6 border-t border-white/10">
+                                    <div className="pt-5 border-t border-white/[0.06]">
                                         <div className="flex items-center justify-between">
-                                            <span className="font-mono text-xs text-gray-500 uppercase tracking-widest">Win Rate</span>
-                                            <span className="font-rajdhani text-2xl font-bold text-blue-400 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                                            <span className="text-[11px] text-gray-500 uppercase tracking-wider">Win Rate</span>
+                                            <span className="text-xl font-semibold text-blue-400 tabular-nums">
                                                 {duelStats.number_of_matches > 0
                                                     ? ((team2Wins / duelStats.number_of_matches) * 100).toFixed(1)
                                                     : "0.0"

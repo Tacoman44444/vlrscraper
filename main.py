@@ -66,14 +66,26 @@ class AgentAssignment(BaseModel):
     player_ign: str
     agent_name: str
 
+class PlayerStatData(BaseModel):
+    player_ign: str
+    agent: str
+    kills: int
+    deaths: int
+    assists: int
+    acs: int | None
+    adr: int | None
+    hs_percent: int | None
+    first_kills: int | None
+    first_deaths: int | None
+
 class MapData(BaseModel):
     map_name: str
     result: str
     team_score: int
     opponent_score: int
     opponent_name: str
-    # Use a list of our new objects
     agent_comp: list[AgentAssignment]
+    player_statistics: list[PlayerStatData]
 
 class MatchData(BaseModel):
     vlr_id: int
@@ -553,10 +565,26 @@ def filtered_mapdata_handler(
             .all()
         )
   
-        # Build the player-agent mapping
         agent_comp = [
             {"player_ign": ign, "agent_name": stat.agent} 
             for stat, ign in player_stats_raw 
+            if stat.player_id in target_player_ids
+        ]
+
+        player_statistics = [
+            PlayerStatData(
+                player_ign=ign,
+                agent=stat.agent,
+                kills=stat.kills,
+                deaths=stat.deaths,
+                assists=stat.assists,
+                acs=stat.acs,
+                adr=stat.adr,
+                hs_percent=stat.hs_percent,
+                first_kills=stat.first_kills,
+                first_deaths=stat.first_deaths
+            )
+            for stat, ign in player_stats_raw
             if stat.player_id in target_player_ids
         ]
 
@@ -571,7 +599,8 @@ def filtered_mapdata_handler(
             team_score=team_score,
             opponent_score=opponent_score,
             opponent_name=opponent_name,
-            agent_comp=agent_comp
+            agent_comp=agent_comp,
+            player_statistics=player_statistics
         )
 
         map_data_list.append(map_data)
@@ -667,10 +696,26 @@ def overall_mapdata_exclude_handler(
             .all()
         )
   
-        # Build the player-agent mapping
         agent_comp = [
             {"player_ign": ign, "agent_name": stat.agent} 
             for stat, ign in player_stats_raw 
+            if stat.player_id in target_player_ids
+        ]
+
+        player_statistics = [
+            PlayerStatData(
+                player_ign=ign,
+                agent=stat.agent,
+                kills=stat.kills,
+                deaths=stat.deaths,
+                assists=stat.assists,
+                acs=stat.acs,
+                adr=stat.adr,
+                hs_percent=stat.hs_percent,
+                first_kills=stat.first_kills,
+                first_deaths=stat.first_deaths
+            )
+            for stat, ign in player_stats_raw
             if stat.player_id in target_player_ids
         ]
 
@@ -685,7 +730,8 @@ def overall_mapdata_exclude_handler(
             team_score=team_score,
             opponent_score=opponent_score,
             opponent_name=opponent_name,
-            agent_comp=agent_comp
+            agent_comp=agent_comp,
+            player_statistics=player_statistics
         )
         map_data_list.append(map_data)
     return {
@@ -786,6 +832,23 @@ def overall_mapdata_handler(
             if stat.player_id in target_player_ids
         ]
 
+        player_statistics = [
+            PlayerStatData(
+                player_ign=ign,
+                agent=stat.agent,
+                kills=stat.kills,
+                deaths=stat.deaths,
+                assists=stat.assists,
+                acs=stat.acs,
+                adr=stat.adr,
+                hs_percent=stat.hs_percent,
+                first_kills=stat.first_kills,
+                first_deaths=stat.first_deaths
+            )
+            for stat, ign in player_stats_raw
+            if stat.player_id in target_player_ids
+        ]
+
         if team_score > opponent_score:
             result = "Win"
         elif team_score < opponent_score:
@@ -797,7 +860,8 @@ def overall_mapdata_handler(
             team_score=team_score,
             opponent_score=opponent_score,
             opponent_name=opponent_name,
-            agent_comp=agent_comp
+            agent_comp=agent_comp,
+            player_statistics=player_statistics
         )
         map_data_list.append(map_data)
 
